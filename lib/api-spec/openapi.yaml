@@ -862,6 +862,8 @@ components:
           type: integer
         questionCount:
           type: integer
+        timeLimit:
+          type: ["integer", "null"]
         createdAt:
           type: string
           format: date-time
@@ -879,6 +881,8 @@ components:
           type: string
         unitId:
           type: integer
+        timeLimit:
+          type: ["integer", "null"]
       required:
         - title
         - unitId
@@ -892,6 +896,8 @@ components:
           type: integer
         text:
           type: string
+        imageUrl:
+          type: ["string", "null"]
         optionA:
           type: string
         optionB:
@@ -923,6 +929,8 @@ components:
           type: integer
         text:
           type: string
+        imageUrl:
+          type: ["string", "null"]
         optionA:
           type: string
         optionB:
@@ -957,6 +965,8 @@ components:
           type: integer
         questionCount:
           type: integer
+        timeLimit:
+          type: ["integer", "null"]
         createdAt:
           type: string
           format: date-time

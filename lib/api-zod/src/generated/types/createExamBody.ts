@@ -9,4 +9,6 @@
 export interface CreateExamBody {
   title: string;
   unitId: number;
+  /** @nullable */
+  timeLimit?: number | null;
 }

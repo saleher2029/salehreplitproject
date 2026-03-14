@@ -97,12 +97,16 @@ export interface Exam {
   title: string;
   unitId: number;
   questionCount: number;
+  /** @nullable */
+  timeLimit?: number | null;
   createdAt: string;
 }
 
 export interface CreateExamBody {
   title: string;
   unitId: number;
+  /** @nullable */
+  timeLimit?: number | null;
 }
 
 export type QuestionCorrectOption =
@@ -119,6 +123,8 @@ export interface Question {
   id: number;
   examId: number;
   text: string;
+  /** @nullable */
+  imageUrl?: string | null;
   optionA: string;
   optionB: string;
   optionC: string;
@@ -140,6 +146,8 @@ export const CreateQuestionBodyCorrectOption = {
 export interface CreateQuestionBody {
   examId: number;
   text: string;
+  /** @nullable */
+  imageUrl?: string | null;
   optionA: string;
   optionB: string;
   optionC: string;
@@ -153,6 +161,8 @@ export interface ExamWithQuestions {
   title: string;
   unitId: number;
   questionCount: number;
+  /** @nullable */
+  timeLimit?: number | null;
   createdAt: string;
   questions: Question[];
 }

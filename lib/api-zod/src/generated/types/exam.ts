@@ -11,5 +11,7 @@ export interface Exam {
   title: string;
   unitId: number;
   questionCount: number;
+  /** @nullable */
+  timeLimit?: number | null;
   createdAt: Date;
 }

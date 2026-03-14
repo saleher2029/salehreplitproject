@@ -11,6 +11,8 @@ export interface Question {
   id: number;
   examId: number;
   text: string;
+  /** @nullable */
+  imageUrl?: string | null;
   optionA: string;
   optionB: string;
   optionC: string;

@@ -7,6 +7,7 @@ export const examsTable = pgTable("exams", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   unitId: integer("unit_id").notNull().references(() => unitsTable.id, { onDelete: "cascade" }),
+  timeLimit: integer("time_limit"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

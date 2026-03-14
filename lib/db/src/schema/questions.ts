@@ -7,6 +7,7 @@ export const questionsTable = pgTable("questions", {
   id: serial("id").primaryKey(),
   examId: integer("exam_id").notNull().references(() => examsTable.id, { onDelete: "cascade" }),
   text: text("text").notNull(),
+  imageUrl: text("image_url"),
   optionA: text("option_a").notNull(),
   optionB: text("option_b").notNull(),
   optionC: text("option_c").notNull(),

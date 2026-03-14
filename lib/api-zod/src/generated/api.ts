@@ -250,6 +250,7 @@ export const GetExamsResponseItem = zod.object({
   title: zod.string(),
   unitId: zod.number(),
   questionCount: zod.number(),
+  timeLimit: zod.number().nullish(),
   createdAt: zod.date(),
 });
 export const GetExamsResponse = zod.array(GetExamsResponseItem);
@@ -260,6 +261,7 @@ export const GetExamsResponse = zod.array(GetExamsResponseItem);
 export const CreateExamBody = zod.object({
   title: zod.string(),
   unitId: zod.number(),
+  timeLimit: zod.number().nullish(),
 });
 
 /**
@@ -274,12 +276,14 @@ export const GetExamResponse = zod.object({
   title: zod.string(),
   unitId: zod.number(),
   questionCount: zod.number(),
+  timeLimit: zod.number().nullish(),
   createdAt: zod.date(),
   questions: zod.array(
     zod.object({
       id: zod.number(),
       examId: zod.number(),
       text: zod.string(),
+      imageUrl: zod.string().nullish(),
       optionA: zod.string(),
       optionB: zod.string(),
       optionC: zod.string(),
@@ -300,6 +304,7 @@ export const UpdateExamParams = zod.object({
 export const UpdateExamBody = zod.object({
   title: zod.string(),
   unitId: zod.number(),
+  timeLimit: zod.number().nullish(),
 });
 
 export const UpdateExamResponse = zod.object({
@@ -307,6 +312,7 @@ export const UpdateExamResponse = zod.object({
   title: zod.string(),
   unitId: zod.number(),
   questionCount: zod.number(),
+  timeLimit: zod.number().nullish(),
   createdAt: zod.date(),
 });
 
@@ -323,6 +329,7 @@ export const DeleteExamParams = zod.object({
 export const CreateQuestionBody = zod.object({
   examId: zod.number(),
   text: zod.string(),
+  imageUrl: zod.string().nullish(),
   optionA: zod.string(),
   optionB: zod.string(),
   optionC: zod.string(),
@@ -341,6 +348,7 @@ export const UpdateQuestionParams = zod.object({
 export const UpdateQuestionBody = zod.object({
   examId: zod.number(),
   text: zod.string(),
+  imageUrl: zod.string().nullish(),
   optionA: zod.string(),
   optionB: zod.string(),
   optionC: zod.string(),
@@ -353,6 +361,7 @@ export const UpdateQuestionResponse = zod.object({
   id: zod.number(),
   examId: zod.number(),
   text: zod.string(),
+  imageUrl: zod.string().nullish(),
   optionA: zod.string(),
   optionB: zod.string(),
   optionC: zod.string(),
