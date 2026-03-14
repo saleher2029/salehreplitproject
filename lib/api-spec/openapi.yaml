@@ -1,22 +1,39 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Tawjihi Practice Exams API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: specializations
+    description: Specialization management
+  - name: subjects
+    description: Subject management
+  - name: units
+    description: Unit management
+  - name: exams
+    description: Exam management
+  - name: questions
+    description: Question management
+  - name: results
+    description: Exam results
+  - name: users
+    description: User management
+  - name: settings
+    description: Admin settings
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +41,627 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/guest:
+    post:
+      operationId: loginAsGuest
+      tags: [auth]
+      summary: Login as guest
+      responses:
+        "200":
+          description: Guest session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/google:
+    post:
+      operationId: loginWithGoogle
+      tags: [auth]
+      summary: Login with Google token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialLoginBody"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/facebook:
+    post:
+      operationId: loginWithFacebook
+      tags: [auth]
+      summary: Login with Facebook token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SocialLoginBody"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/admin:
+    post:
+      operationId: loginAsAdmin
+      tags: [auth]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginBody"
+      responses:
+        "200":
+          description: Admin authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /specializations:
+    get:
+      operationId: getSpecializations
+      tags: [specializations]
+      summary: List all specializations
+      responses:
+        "200":
+          description: List of specializations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Specialization"
+    post:
+      operationId: createSpecialization
+      tags: [specializations]
+      summary: Create a specialization (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSpecializationBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Specialization"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /specializations/{id}:
+    put:
+      operationId: updateSpecialization
+      tags: [specializations]
+      summary: Update a specialization (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSpecializationBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Specialization"
+    delete:
+      operationId: deleteSpecialization
+      tags: [specializations]
+      summary: Delete a specialization (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /subjects:
+    get:
+      operationId: getSubjects
+      tags: [subjects]
+      summary: List subjects by specialization
+      parameters:
+        - name: specializationId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of subjects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subject"
+    post:
+      operationId: createSubject
+      tags: [subjects]
+      summary: Create a subject (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubjectBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+
+  /subjects/{id}:
+    put:
+      operationId: updateSubject
+      tags: [subjects]
+      summary: Update a subject (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubjectBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+    delete:
+      operationId: deleteSubject
+      tags: [subjects]
+      summary: Delete a subject (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /units:
+    get:
+      operationId: getUnits
+      tags: [units]
+      summary: List units by subject
+      parameters:
+        - name: subjectId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of units
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Unit"
+    post:
+      operationId: createUnit
+      tags: [units]
+      summary: Create a unit (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUnitBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+
+  /units/{id}:
+    put:
+      operationId: updateUnit
+      tags: [units]
+      summary: Update a unit (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUnitBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+    delete:
+      operationId: deleteUnit
+      tags: [units]
+      summary: Delete a unit (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /exams:
+    get:
+      operationId: getExams
+      tags: [exams]
+      summary: List exams by unit
+      parameters:
+        - name: unitId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of exams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exam"
+    post:
+      operationId: createExam
+      tags: [exams]
+      summary: Create an exam (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExamBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exam"
+
+  /exams/{id}:
+    get:
+      operationId: getExam
+      tags: [exams]
+      summary: Get exam with questions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exam with questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamWithQuestions"
+    put:
+      operationId: updateExam
+      tags: [exams]
+      summary: Update an exam (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExamBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exam"
+    delete:
+      operationId: deleteExam
+      tags: [exams]
+      summary: Delete an exam (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /questions:
+    post:
+      operationId: createQuestion
+      tags: [questions]
+      summary: Create a question (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  /questions/{id}:
+    put:
+      operationId: updateQuestion
+      tags: [questions]
+      summary: Update a question (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+    delete:
+      operationId: deleteQuestion
+      tags: [questions]
+      summary: Delete a question (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /results:
+    get:
+      operationId: getMyResults
+      tags: [results]
+      summary: Get current user's exam results
+      responses:
+        "200":
+          description: List of results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExamResult"
+    post:
+      operationId: submitExam
+      tags: [results]
+      summary: Submit exam answers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitExamBody"
+      responses:
+        "201":
+          description: Exam submitted, result returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamResultDetail"
+
+  /results/{id}:
+    get:
+      operationId: getResult
+      tags: [results]
+      summary: Get a specific result with answer details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Result detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamResultDetail"
+
+  /users:
+    get:
+      operationId: getUsers
+      tags: [users]
+      summary: List all users (admin only)
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user role (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get site settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update site settings (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +672,436 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [admin, supervisor, student, guest]
+        provider:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - role
+        - createdAt
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    SocialLoginBody:
+      type: object
+      properties:
+        token:
+          type: string
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+      required:
+        - token
+        - name
+
+    AdminLoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    Specialization:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - createdAt
+
+    CreateSpecializationBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    Subject:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        specializationId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - specializationId
+        - createdAt
+
+    CreateSubjectBody:
+      type: object
+      properties:
+        name:
+          type: string
+        specializationId:
+          type: integer
+      required:
+        - name
+        - specializationId
+
+    Unit:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        subjectId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - subjectId
+        - createdAt
+
+    CreateUnitBody:
+      type: object
+      properties:
+        name:
+          type: string
+        subjectId:
+          type: integer
+      required:
+        - name
+        - subjectId
+
+    Exam:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        unitId:
+          type: integer
+        questionCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - unitId
+        - questionCount
+        - createdAt
+
+    CreateExamBody:
+      type: object
+      properties:
+        title:
+          type: string
+        unitId:
+          type: integer
+      required:
+        - title
+        - unitId
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+        examId:
+          type: integer
+        text:
+          type: string
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+        correctOption:
+          type: string
+          enum: [A, B, C, D]
+        orderIndex:
+          type: integer
+      required:
+        - id
+        - examId
+        - text
+        - optionA
+        - optionB
+        - optionC
+        - optionD
+        - correctOption
+        - orderIndex
+
+    CreateQuestionBody:
+      type: object
+      properties:
+        examId:
+          type: integer
+        text:
+          type: string
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+        correctOption:
+          type: string
+          enum: [A, B, C, D]
+        orderIndex:
+          type: integer
+      required:
+        - examId
+        - text
+        - optionA
+        - optionB
+        - optionC
+        - optionD
+        - correctOption
+        - orderIndex
+
+    ExamWithQuestions:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        unitId:
+          type: integer
+        questionCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+      required:
+        - id
+        - title
+        - unitId
+        - questionCount
+        - createdAt
+        - questions
+
+    SubmitExamBody:
+      type: object
+      properties:
+        examId:
+          type: integer
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Answer"
+      required:
+        - examId
+        - answers
+
+    Answer:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        selectedOption:
+          type: string
+          enum: [A, B, C, D]
+      required:
+        - questionId
+        - selectedOption
+
+    ExamResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        examId:
+          type: integer
+        examTitle:
+          type: string
+        userId:
+          type: integer
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentage:
+          type: number
+        completedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - examId
+        - examTitle
+        - userId
+        - score
+        - totalQuestions
+        - percentage
+        - completedAt
+
+    AnswerDetail:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        questionText:
+          type: string
+        selectedOption:
+          type: string
+        correctOption:
+          type: string
+        isCorrect:
+          type: boolean
+        optionA:
+          type: string
+        optionB:
+          type: string
+        optionC:
+          type: string
+        optionD:
+          type: string
+      required:
+        - questionId
+        - questionText
+        - selectedOption
+        - correctOption
+        - isCorrect
+        - optionA
+        - optionB
+        - optionC
+        - optionD
+
+    ExamResultDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        examId:
+          type: integer
+        examTitle:
+          type: string
+        userId:
+          type: integer
+        score:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentage:
+          type: number
+        completedAt:
+          type: string
+          format: date-time
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerDetail"
+      required:
+        - id
+        - examId
+        - examTitle
+        - userId
+        - score
+        - totalQuestions
+        - percentage
+        - completedAt
+        - answers
+
+    UpdateUserBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [admin, supervisor, student, guest]
+        name:
+          type: string
+      required:
+        - role
+
+    SiteSettings:
+      type: object
+      properties:
+        id:
+          type: integer
+        whatsappNumber:
+          type: string
+        subscriptionInfo:
+          type: string
+      required:
+        - id
+        - whatsappNumber
+        - subscriptionInfo
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        whatsappNumber:
+          type: string
+        subscriptionInfo:
+          type: string
+      required:
+        - whatsappNumber
+        - subscriptionInfo

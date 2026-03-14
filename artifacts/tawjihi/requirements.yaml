@@ -1,0 +1,10 @@
+packages:
+  "framer-motion": "For page transitions and smooth UI animations"
+  "lucide-react": "For beautiful consistent icons"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility function to efficiently merge Tailwind CSS classes"
+
+images:
+  - path: "artifacts/tawjihi/public/images/login-bg.png"
+    description: "Abstract modern Arabic geometric pattern background in deep emerald and teal colors, soft lighting, educational theme, elegant, slightly blurred"
+    aspect_ratio: "16:9"
