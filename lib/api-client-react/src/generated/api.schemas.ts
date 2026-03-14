@@ -42,11 +42,15 @@ export interface AuthResponse {
   token: string;
 }
 
-export interface SocialLoginBody {
-  token: string;
+export interface RegisterBody {
   name: string;
-  /** @nullable */
-  email?: string | null;
+  email: string;
+  password: string;
+}
+
+export interface LoginBody {
+  email: string;
+  password: string;
 }
 
 export interface AdminLoginBody {

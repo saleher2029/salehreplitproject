@@ -30,36 +30,23 @@ export const LoginAsGuestResponse = zod.object({
 });
 
 /**
- * @summary Login with Google token
+ * @summary Register with email and password
  */
-export const LoginWithGoogleBody = zod.object({
-  token: zod.string(),
+export const RegisterWithEmailBody = zod.object({
   name: zod.string(),
-  email: zod.string().nullish(),
-});
-
-export const LoginWithGoogleResponse = zod.object({
-  user: zod.object({
-    id: zod.number(),
-    name: zod.string(),
-    email: zod.string().nullish(),
-    role: zod.enum(["admin", "supervisor", "student", "guest"]),
-    provider: zod.string().nullish(),
-    createdAt: zod.date(),
-  }),
-  token: zod.string(),
+  email: zod.string(),
+  password: zod.string(),
 });
 
 /**
- * @summary Login with Facebook token
+ * @summary Login with email and password
  */
-export const LoginWithFacebookBody = zod.object({
-  token: zod.string(),
-  name: zod.string(),
-  email: zod.string().nullish(),
+export const LoginWithEmailBody = zod.object({
+  email: zod.string(),
+  password: zod.string(),
 });
 
-export const LoginWithFacebookResponse = zod.object({
+export const LoginWithEmailResponse = zod.object({
   user: zod.object({
     id: zod.number(),
     name: zod.string(),

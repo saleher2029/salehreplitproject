@@ -55,36 +55,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
 
-  /auth/google:
+  /auth/register:
     post:
-      operationId: loginWithGoogle
+      operationId: registerWithEmail
       tags: [auth]
-      summary: Login with Google token
+      summary: Register with email and password
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SocialLoginBody"
+              $ref: "#/components/schemas/RegisterBody"
       responses:
-        "200":
-          description: Authenticated
+        "201":
+          description: Registered and authenticated
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-  /auth/facebook:
+  /auth/login:
     post:
-      operationId: loginWithFacebook
+      operationId: loginWithEmail
       tags: [auth]
-      summary: Login with Facebook token
+      summary: Login with email and password
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SocialLoginBody"
+              $ref: "#/components/schemas/LoginBody"
       responses:
         "200":
           description: Authenticated
@@ -92,6 +98,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /auth/admin:
     post:
@@ -722,18 +734,30 @@ components:
         - user
         - token
 
-    SocialLoginBody:
+    RegisterBody:
       type: object
       properties:
-        token:
-          type: string
         name:
           type: string
         email:
-          type: ["string", "null"]
+          type: string
+        password:
+          type: string
       required:
-        - token
         - name
+        - email
+        - password
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
 
     AdminLoginBody:
       type: object

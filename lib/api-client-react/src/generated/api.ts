@@ -33,9 +33,10 @@ import type {
   GetSubjectsParams,
   GetUnitsParams,
   HealthStatus,
+  LoginBody,
   Question,
+  RegisterBody,
   SiteSettings,
-  SocialLoginBody,
   Specialization,
   Subject,
   SubmitExamBody,
@@ -212,42 +213,42 @@ export const useLoginAsGuest = <
 };
 
 /**
- * @summary Login with Google token
+ * @summary Register with email and password
  */
-export const getLoginWithGoogleUrl = () => {
-  return `/api/auth/google`;
+export const getRegisterWithEmailUrl = () => {
+  return `/api/auth/register`;
 };
 
-export const loginWithGoogle = async (
-  socialLoginBody: SocialLoginBody,
+export const registerWithEmail = async (
+  registerBody: RegisterBody,
   options?: RequestInit,
 ): Promise<AuthResponse> => {
-  return customFetch<AuthResponse>(getLoginWithGoogleUrl(), {
+  return customFetch<AuthResponse>(getRegisterWithEmailUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(socialLoginBody),
+    body: JSON.stringify(registerBody),
   });
 };
 
-export const getLoginWithGoogleMutationOptions = <
-  TError = ErrorType<unknown>,
+export const getRegisterWithEmailMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof loginWithGoogle>>,
+    Awaited<ReturnType<typeof registerWithEmail>>,
     TError,
-    { data: BodyType<SocialLoginBody> },
+    { data: BodyType<RegisterBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof loginWithGoogle>>,
+  Awaited<ReturnType<typeof registerWithEmail>>,
   TError,
-  { data: BodyType<SocialLoginBody> },
+  { data: BodyType<RegisterBody> },
   TContext
 > => {
-  const mutationKey = ["loginWithGoogle"];
+  const mutationKey = ["registerWithEmail"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -257,83 +258,83 @@ export const getLoginWithGoogleMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof loginWithGoogle>>,
-    { data: BodyType<SocialLoginBody> }
+    Awaited<ReturnType<typeof registerWithEmail>>,
+    { data: BodyType<RegisterBody> }
   > = (props) => {
     const { data } = props ?? {};
 
-    return loginWithGoogle(data, requestOptions);
+    return registerWithEmail(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type LoginWithGoogleMutationResult = NonNullable<
-  Awaited<ReturnType<typeof loginWithGoogle>>
+export type RegisterWithEmailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registerWithEmail>>
 >;
-export type LoginWithGoogleMutationBody = BodyType<SocialLoginBody>;
-export type LoginWithGoogleMutationError = ErrorType<unknown>;
+export type RegisterWithEmailMutationBody = BodyType<RegisterBody>;
+export type RegisterWithEmailMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Login with Google token
+ * @summary Register with email and password
  */
-export const useLoginWithGoogle = <
-  TError = ErrorType<unknown>,
+export const useRegisterWithEmail = <
+  TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof loginWithGoogle>>,
+    Awaited<ReturnType<typeof registerWithEmail>>,
     TError,
-    { data: BodyType<SocialLoginBody> },
+    { data: BodyType<RegisterBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof loginWithGoogle>>,
+  Awaited<ReturnType<typeof registerWithEmail>>,
   TError,
-  { data: BodyType<SocialLoginBody> },
+  { data: BodyType<RegisterBody> },
   TContext
 > => {
-  return useMutation(getLoginWithGoogleMutationOptions(options));
+  return useMutation(getRegisterWithEmailMutationOptions(options));
 };
 
 /**
- * @summary Login with Facebook token
+ * @summary Login with email and password
  */
-export const getLoginWithFacebookUrl = () => {
-  return `/api/auth/facebook`;
+export const getLoginWithEmailUrl = () => {
+  return `/api/auth/login`;
 };
 
-export const loginWithFacebook = async (
-  socialLoginBody: SocialLoginBody,
+export const loginWithEmail = async (
+  loginBody: LoginBody,
   options?: RequestInit,
 ): Promise<AuthResponse> => {
-  return customFetch<AuthResponse>(getLoginWithFacebookUrl(), {
+  return customFetch<AuthResponse>(getLoginWithEmailUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(socialLoginBody),
+    body: JSON.stringify(loginBody),
   });
 };
 
-export const getLoginWithFacebookMutationOptions = <
-  TError = ErrorType<unknown>,
+export const getLoginWithEmailMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof loginWithFacebook>>,
+    Awaited<ReturnType<typeof loginWithEmail>>,
     TError,
-    { data: BodyType<SocialLoginBody> },
+    { data: BodyType<LoginBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof loginWithFacebook>>,
+  Awaited<ReturnType<typeof loginWithEmail>>,
   TError,
-  { data: BodyType<SocialLoginBody> },
+  { data: BodyType<LoginBody> },
   TContext
 > => {
-  const mutationKey = ["loginWithFacebook"];
+  const mutationKey = ["loginWithEmail"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -343,44 +344,44 @@ export const getLoginWithFacebookMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof loginWithFacebook>>,
-    { data: BodyType<SocialLoginBody> }
+    Awaited<ReturnType<typeof loginWithEmail>>,
+    { data: BodyType<LoginBody> }
   > = (props) => {
     const { data } = props ?? {};
 
-    return loginWithFacebook(data, requestOptions);
+    return loginWithEmail(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type LoginWithFacebookMutationResult = NonNullable<
-  Awaited<ReturnType<typeof loginWithFacebook>>
+export type LoginWithEmailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof loginWithEmail>>
 >;
-export type LoginWithFacebookMutationBody = BodyType<SocialLoginBody>;
-export type LoginWithFacebookMutationError = ErrorType<unknown>;
+export type LoginWithEmailMutationBody = BodyType<LoginBody>;
+export type LoginWithEmailMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Login with Facebook token
+ * @summary Login with email and password
  */
-export const useLoginWithFacebook = <
-  TError = ErrorType<unknown>,
+export const useLoginWithEmail = <
+  TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof loginWithFacebook>>,
+    Awaited<ReturnType<typeof loginWithEmail>>,
     TError,
-    { data: BodyType<SocialLoginBody> },
+    { data: BodyType<LoginBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof loginWithFacebook>>,
+  Awaited<ReturnType<typeof loginWithEmail>>,
   TError,
-  { data: BodyType<SocialLoginBody> },
+  { data: BodyType<LoginBody> },
   TContext
 > => {
-  return useMutation(getLoginWithFacebookMutationOptions(options));
+  return useMutation(getLoginWithEmailMutationOptions(options));
 };
 
 /**

@@ -6,9 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface SocialLoginBody {
-  token: string;
-  name: string;
-  /** @nullable */
-  email?: string | null;
+export interface LoginBody {
+  email: string;
+  password: string;
 }
