@@ -57,7 +57,7 @@ router.post("/results", requireAuth, async (req, res): Promise<void> => {
     }
   }
 
-  const percentage = (score / questions.length) * 100;
+  const percentage = Math.round((score / questions.length) * 100);
 
   const [result] = await db.insert(examResultsTable).values({
     userId: user.id,
@@ -82,6 +82,7 @@ router.post("/results", requireAuth, async (req, res): Promise<void> => {
   const answerDetails = questions.map(q => ({
     questionId: q.id,
     questionText: q.text,
+    questionImage: q.imageUrl ?? null,
     selectedOption: answerMap.get(q.id) ?? "A",
     correctOption: q.correctOption,
     isCorrect: answerMap.get(q.id) === q.correctOption,
@@ -132,6 +133,7 @@ router.get("/results/:id", requireAuth, async (req, res): Promise<void> => {
     return {
       questionId: ad.questionId,
       questionText: q?.text ?? "",
+      questionImage: q?.imageUrl ?? null,
       selectedOption: ad.selectedOption,
       correctOption: q?.correctOption ?? "",
       isCorrect: ad.isCorrect === 1,

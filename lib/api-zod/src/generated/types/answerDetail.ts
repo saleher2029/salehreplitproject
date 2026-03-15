@@ -9,6 +9,8 @@
 export interface AnswerDetail {
   questionId: number;
   questionText: string;
+  /** @nullable */
+  questionImage?: string | null;
   selectedOption: string;
   correctOption: string;
   isCorrect: boolean;

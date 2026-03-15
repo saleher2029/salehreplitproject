@@ -425,6 +425,7 @@ export const GetResultResponse = zod.object({
     zod.object({
       questionId: zod.number(),
       questionText: zod.string(),
+      questionImage: zod.string().nullish(),
       selectedOption: zod.string(),
       correctOption: zod.string(),
       isCorrect: zod.boolean(),
