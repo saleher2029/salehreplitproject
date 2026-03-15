@@ -32,7 +32,7 @@ export default function Login() {
     guestMutation.mutate(undefined, {
       onSuccess: (data) => {
         setAuth(data.user, data.token);
-        setLocation("/specializations");
+        setLocation("/");
       },
     });
   };
@@ -43,7 +43,7 @@ export default function Login() {
     loginMutation.mutate({ data: { email, password } }, {
       onSuccess: (data) => {
         setAuth(data.user, data.token);
-        setLocation("/specializations");
+        setLocation("/");
       },
       onError: (err: any) => {
         setErrorMsg(err?.data?.error || "البريد الإلكتروني أو كلمة المرور غير صحيحة");
@@ -61,7 +61,7 @@ export default function Login() {
     registerMutation.mutate({ data: { name, email, password } }, {
       onSuccess: (data) => {
         setAuth(data.user, data.token);
-        setLocation("/specializations");
+        setLocation("/");
       },
       onError: (err: any) => {
         setErrorMsg(err?.data?.error || "حدث خطأ، يرجى المحاولة مرة أخرى");
