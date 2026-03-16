@@ -12,19 +12,43 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function safeLocalStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function getStoredToken(): string | null {
+  try {
+    return safeLocalStorage()?.getItem("tawjihi_token") ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function setStoredToken(t: string) {
+  try { safeLocalStorage()?.setItem("tawjihi_token", t); } catch {}
+}
+
+function removeStoredToken() {
+  try { safeLocalStorage()?.removeItem("tawjihi_token"); } catch {}
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem("tawjihi_token"));
+  const [token, setToken] = useState<string | null>(getStoredToken);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (token) {
-      localStorage.setItem("tawjihi_token", token);
+      setStoredToken(token);
       getCurrentUser({ headers: { Authorization: `Bearer ${token}` } })
         .then(u => setUser(u))
         .catch(() => {
           setToken(null);
-          localStorage.removeItem("tawjihi_token");
+          removeStoredToken();
         })
         .finally(() => setIsLoading(false));
     } else {
@@ -35,13 +59,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setAuth = (u: User, t: string) => {
     setUser(u);
     setToken(t);
-    localStorage.setItem("tawjihi_token", t);
+    setStoredToken(t);
   };
 
   const clearAuth = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem("tawjihi_token");
+    removeStoredToken();
   };
 
   const updateUser = (updates: Partial<User>) => {
