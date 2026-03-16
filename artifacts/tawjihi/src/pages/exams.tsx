@@ -1,5 +1,5 @@
 import { useGetExams } from "@workspace/api-client-react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { FileText, Play, ArrowRight } from "lucide-react";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 export default function Exams({ params }: { params: { id: string } }) {
   const { token } = useAuth();
   const unitId = parseInt(params.id);
+  const search = useSearch();
+  const subjectId = new URLSearchParams(search).get("subjectId");
 
   const { data, isLoading } = useGetExams({ unitId }, {
     request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
@@ -27,10 +29,19 @@ export default function Exams({ params }: { params: { id: string } }) {
           <h1 className="text-3xl font-bold font-serif text-foreground">الامتحانات المتاحة</h1>
           <p className="text-muted-foreground font-medium">اختر امتحاناً للبدء</p>
         </div>
-        <Button variant="outline" className="rounded-xl font-bold" onClick={() => window.history.back()}>
-          <ArrowRight className="ml-2 w-4 h-4" />
-          العودة للوحدات
-        </Button>
+        {subjectId ? (
+          <Link href={`/subject/${subjectId}`}>
+            <Button variant="outline" className="rounded-xl font-bold">
+              <ArrowRight className="ml-2 w-4 h-4" />
+              العودة للوحدات
+            </Button>
+          </Link>
+        ) : (
+          <Button variant="outline" className="rounded-xl font-bold" onClick={() => window.history.back()}>
+            <ArrowRight className="ml-2 w-4 h-4" />
+            العودة للوحدات
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -34,7 +34,7 @@ export default function Units({ params }: { params: { id: string } }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {data?.map((unit, i) => (
-          <Link key={unit.id} href={`/unit/${unit.id}`} className="block group">
+          <Link key={unit.id} href={`/unit/${unit.id}?subjectId=${subjectId}`} className="block group">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
