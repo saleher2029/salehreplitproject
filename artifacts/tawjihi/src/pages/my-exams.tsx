@@ -196,12 +196,21 @@ export default function MyExams() {
 
 function PageHeader() {
   return (
-    <div className="space-y-1 border-b border-border pb-5">
-      <h1 className="text-3xl font-bold font-serif text-foreground flex items-center gap-3">
-        <Trophy className="w-8 h-8 text-secondary" />
-        امتحاناتي
-      </h1>
-      <p className="text-muted-foreground font-medium">سجل الامتحانات التي قدّمتها ونتائجك فيها</p>
+    <div className="flex items-start justify-between gap-4 border-b border-border pb-5 flex-wrap">
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold font-serif text-foreground flex items-center gap-3">
+          <Trophy className="w-8 h-8 text-secondary" />
+          امتحاناتي
+        </h1>
+        <p className="text-muted-foreground font-medium">سجل الامتحانات التي قدّمتها ونتائجك فيها</p>
+      </div>
+      <button
+        onClick={() => window.history.back()}
+        className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border font-bold text-sm hover:bg-muted transition-colors shrink-0 mt-1"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        العودة
+      </button>
     </div>
   );
 }

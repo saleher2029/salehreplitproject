@@ -65,7 +65,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {/* Navigation + User */}
           {user && (
             <div className="flex items-center gap-2 sm:gap-3">
-              <Link href="/my-exams" className="text-sm font-semibold hover:text-primary transition-colors hidden sm:block">
+              <Link href="/my-exams" className="text-sm font-semibold hover:text-primary transition-colors">
                 امتحاناتي
               </Link>
 

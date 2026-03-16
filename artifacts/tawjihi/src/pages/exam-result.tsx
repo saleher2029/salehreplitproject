@@ -76,20 +76,11 @@ export default function ExamResult({ params }: { params: { id: string } }) {
     <div className="max-w-4xl mx-auto space-y-8 py-6" dir="rtl">
       <div className="flex justify-between items-center gap-2 flex-wrap">
         <h1 className="text-2xl font-bold font-serif">النتيجة والتصحيح</h1>
-        <div className="flex gap-2">
-          {result.unitId && (
-            <Link href={`/unit/${result.unitId}`}>
-              <Button variant="secondary" className="rounded-xl font-bold">
-                <ArrowRight className="ml-2 w-4 h-4" /> تقدم
-              </Button>
-            </Link>
-          )}
-          <Link href="/my-exams">
-            <Button variant="outline" className="rounded-xl font-bold">
-              امتحاناتي
-            </Button>
-          </Link>
-        </div>
+        <Link href="/my-exams">
+          <Button variant="outline" className="rounded-xl font-bold">
+            امتحاناتي
+          </Button>
+        </Link>
       </div>
 
       {/* ── Score card ────────────────────────────────────────────────────── */}
@@ -332,13 +323,18 @@ export default function ExamResult({ params }: { params: { id: string } }) {
         </div>
       )}
 
-      <div className="flex gap-3 pt-4">
-        <Link href={`/exam/${result.examId}`} className="flex-1">
+      <div className="flex flex-wrap gap-3 pt-4">
+        <Link href={`/exam/${result.examId}`} className="flex-1 min-w-[130px]">
           <Button variant="outline" className="w-full h-12 rounded-xl font-bold">إعادة الامتحان</Button>
         </Link>
-        <Link href="/my-exams" className="flex-1">
-          <Button className="w-full h-12 rounded-xl font-bold">امتحاناتي</Button>
+        <Link href="/my-exams" className="flex-1 min-w-[130px]">
+          <Button variant="outline" className="w-full h-12 rounded-xl font-bold">امتحاناتي</Button>
         </Link>
+        {result.unitId && (
+          <Link href={`/unit/${result.unitId}?from=result&resultId=${result.id}`} className="flex-1 min-w-[130px]">
+            <Button className="w-full h-12 rounded-xl font-bold">تقدم ←</Button>
+          </Link>
+        )}
       </div>
     </div>
   );
