@@ -66,10 +66,10 @@ export default function TakeExam({ params }: { params: { id: string } }) {
   const submitMutation = useSubmitExam(reqOpts);
   const [, setLocation] = useLocation();
 
-  // Anti-screenshot: active only during exam phase, only for non-admin users
+  // Anti-screenshot: active for entire exam page, only for students & guests (not admins/supervisors)
   const isAdmin = user?.role === "admin" || user?.role === "supervisor";
   const [phase, setPhase] = useState<"confirm" | "exam" | "submitting">("confirm");
-  useAntiScreenshot(!isAdmin && phase === "exam");
+  useAntiScreenshot(!isAdmin);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
