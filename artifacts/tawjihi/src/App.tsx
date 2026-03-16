@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useServerEvents } from "@/hooks/use-server-events";
 
 // Layouts
 import { Layout } from "@/components/layout";
@@ -32,7 +33,20 @@ import AdminUsers from "@/pages/admin/users";
 import AdminNotes from "@/pages/admin/notes";
 import AdminSettings from "@/pages/admin/settings";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 10_000,
+      refetchOnWindowFocus: true,
+      retry: 1,
+    },
+  },
+});
+
+function SyncLayer() {
+  useServerEvents();
+  return null;
+}
 
 function ProtectedRoute({ component: Component, adminOnly = false, layout: Wrapper = Layout, ...rest }: any) {
   return (
@@ -87,6 +101,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <SyncLayer />
       <AuthProvider>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
