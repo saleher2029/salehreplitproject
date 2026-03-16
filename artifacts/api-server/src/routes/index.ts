@@ -9,8 +9,13 @@ import questionsRouter from "./questions";
 import resultsRouter from "./results";
 import usersRouter from "./users";
 import settingsRouter from "./settings";
+import { addSSEClient } from "../sse";
 
 const router: IRouter = Router();
+
+router.get("/events", (req, res) => {
+  addSSEClient(res);
+});
 
 router.use(healthRouter);
 router.use(authRouter);

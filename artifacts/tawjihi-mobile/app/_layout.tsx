@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { useServerEvents } from "@/hooks/useServerEvents";
 
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
@@ -29,6 +30,7 @@ const queryClient = new QueryClient({
 function RootLayoutNav() {
   const { isLoading, user } = useAuth();
   const appState = useRef<AppStateStatus>(AppState.currentState);
+  useServerEvents();
 
   useEffect(() => {
     if (!isLoading) {

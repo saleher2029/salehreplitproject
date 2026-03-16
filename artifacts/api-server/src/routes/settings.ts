@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, siteSettingsTable } from "@workspace/db";
 import { requireAdmin } from "../lib/auth";
+import { broadcastChange } from "../sse";
 import {
   GetSettingsResponse,
   UpdateSettingsBody,
@@ -41,6 +42,7 @@ router.put("/settings", requireAdmin, async (req, res): Promise<void> => {
     .set(parsed.data)
     .where(eq(siteSettingsTable.id, existing.id))
     .returning();
+  broadcastChange("settings");
   res.json(UpdateSettingsResponse.parse(settings));
 });
 

@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, subjectsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
+import { broadcastChange } from "../sse";
 import {
   GetSubjectsResponse,
   GetSubjectsQueryParams,
@@ -34,6 +35,7 @@ router.post("/subjects", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
   const [subject] = await db.insert(subjectsTable).values(parsed.data).returning();
+  broadcastChange("subjects");
   res.status(201).json(subject);
 });
 
@@ -56,6 +58,7 @@ router.put("/subjects/:id", requireAdmin, async (req, res): Promise<void> => {
     res.status(404).json({ error: "المادة غير موجودة" });
     return;
   }
+  broadcastChange("subjects");
   res.json(UpdateSubjectResponse.parse(subject));
 });
 
@@ -66,6 +69,7 @@ router.delete("/subjects/:id", requireAdmin, async (req, res): Promise<void> => 
     return;
   }
   await db.delete(subjectsTable).where(eq(subjectsTable.id, params.data.id));
+  broadcastChange("subjects");
   res.sendStatus(204);
 });
 

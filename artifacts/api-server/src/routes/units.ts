@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, unitsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
+import { broadcastChange } from "../sse";
 import {
   GetUnitsResponse,
   GetUnitsQueryParams,
@@ -34,6 +35,7 @@ router.post("/units", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
   const [unit] = await db.insert(unitsTable).values(parsed.data).returning();
+  broadcastChange("units");
   res.status(201).json(unit);
 });
 
@@ -56,6 +58,7 @@ router.put("/units/:id", requireAdmin, async (req, res): Promise<void> => {
     res.status(404).json({ error: "الوحدة غير موجودة" });
     return;
   }
+  broadcastChange("units");
   res.json(UpdateUnitResponse.parse(unit));
 });
 
@@ -66,6 +69,7 @@ router.delete("/units/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
   await db.delete(unitsTable).where(eq(unitsTable.id, params.data.id));
+  broadcastChange("units");
   res.sendStatus(204);
 });
 

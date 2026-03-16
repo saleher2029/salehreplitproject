@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, specializationsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
+import { broadcastChange } from "../sse";
 import {
   GetSpecializationsResponse,
   CreateSpecializationBody,
@@ -25,6 +26,7 @@ router.post("/specializations", requireAdmin, async (req, res): Promise<void> =>
     return;
   }
   const [spec] = await db.insert(specializationsTable).values(parsed.data).returning();
+  broadcastChange("specializations");
   res.status(201).json(spec);
 });
 
@@ -47,6 +49,7 @@ router.put("/specializations/:id", requireAdmin, async (req, res): Promise<void>
     res.status(404).json({ error: "التخصص غير موجود" });
     return;
   }
+  broadcastChange("specializations");
   res.json(UpdateSpecializationResponse.parse(spec));
 });
 
@@ -57,6 +60,7 @@ router.delete("/specializations/:id", requireAdmin, async (req, res): Promise<vo
     return;
   }
   await db.delete(specializationsTable).where(eq(specializationsTable.id, params.data.id));
+  broadcastChange("specializations");
   res.sendStatus(204);
 });
 

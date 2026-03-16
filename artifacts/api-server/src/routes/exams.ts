@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, examsTable, questionsTable } from "@workspace/db";
 import { eq, count } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
+import { broadcastChange } from "../sse";
 import {
   GetExamsResponse,
   GetExamsQueryParams,
@@ -40,6 +41,7 @@ router.post("/exams", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
   const [exam] = await db.insert(examsTable).values(parsed.data).returning();
+  broadcastChange("exams");
   res.status(201).json({ ...exam, questionCount: 0 });
 });
 
@@ -80,6 +82,7 @@ router.put("/exams/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
   const [{ count: qCount }] = await db.select({ count: count() }).from(questionsTable).where(eq(questionsTable.examId, exam.id));
+  broadcastChange("exams");
   res.json(UpdateExamResponse.parse({ ...exam, questionCount: Number(qCount) }));
 });
 
@@ -90,6 +93,7 @@ router.delete("/exams/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
   await db.delete(examsTable).where(eq(examsTable.id, params.data.id));
+  broadcastChange("exams");
   res.sendStatus(204);
 });
 
