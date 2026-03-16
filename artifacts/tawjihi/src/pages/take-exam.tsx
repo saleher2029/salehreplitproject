@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useGetExam, useSubmitExam } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -6,11 +6,22 @@ import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
+import { useAntiScreenshot } from "@/hooks/use-anti-screenshot";
 import {
   CheckCircle2, Clock, BookOpen, ArrowRight,
   ChevronRight, ChevronLeft, Flag, Send, Star, ZoomIn, X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+// ── Fisher-Yates shuffle ───────────────────────────────────────────────────
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -51,7 +62,10 @@ export default function TakeExam({ params }: { params: { id: string } }) {
   const submitMutation = useSubmitExam(reqOpts);
   const [, setLocation] = useLocation();
 
+  // Anti-screenshot: active only during exam phase, only for non-admin users
+  const isAdmin = user?.role === "admin" || user?.role === "supervisor";
   const [phase, setPhase] = useState<"confirm" | "exam" | "submitting">("confirm");
+  useAntiScreenshot(!isAdmin && phase === "exam");
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
@@ -117,6 +131,18 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timeLeft]);
 
+  // ── Randomize questions if questionLimit is set ─────────────────────────
+  // Must be before early returns to respect hooks rules
+  const questions = useMemo(() => {
+    const all = exam?.questions ?? [];
+    const limit = exam?.questionLimit;
+    if (limit && limit > 0 && limit < all.length) {
+      return shuffleArray(all).slice(0, limit);
+    }
+    return all;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exam?.id]); // re-shuffle only when exam changes
+
   if (isLoading) return (
     <div className="flex flex-col justify-center items-center h-64 gap-4">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
@@ -124,8 +150,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     </div>
   );
   if (!exam) return <div className="text-center p-8 text-destructive font-bold text-xl">الامتحان غير موجود</div>;
-
-  const questions = exam.questions;
   const totalCount = questions.length;
   const answeredCount = Object.keys(answers).length;
   const isComplete = answeredCount === totalCount;
@@ -154,9 +178,19 @@ export default function TakeExam({ params }: { params: { id: string } }) {
             <div className="flex justify-center gap-10 py-2">
               <div className="text-center">
                 <div className="flex items-center gap-1 text-primary font-black text-3xl justify-center">
-                  <BookOpen className="w-5 h-5" /> {exam.questionCount}
+                  <BookOpen className="w-5 h-5" />
+                  {exam.questionLimit && exam.questionLimit < exam.questionCount
+                    ? exam.questionLimit
+                    : exam.questionCount}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1 font-medium">سؤال</p>
+                <p className="text-xs text-muted-foreground mt-1 font-medium">
+                  سؤال
+                  {exam.questionLimit && exam.questionLimit < exam.questionCount && (
+                    <span className="block text-secondary font-semibold mt-0.5">
+                      عشوائي من {exam.questionCount}
+                    </span>
+                  )}
+                </p>
               </div>
               {exam.timeLimit && (
                 <div className="text-center">

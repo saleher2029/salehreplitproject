@@ -251,6 +251,7 @@ export const GetExamsResponseItem = zod.object({
   unitId: zod.number(),
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
+  questionLimit: zod.number().nullish(),
   createdAt: zod.date(),
 });
 export const GetExamsResponse = zod.array(GetExamsResponseItem);
@@ -262,6 +263,7 @@ export const CreateExamBody = zod.object({
   title: zod.string(),
   unitId: zod.number(),
   timeLimit: zod.number().nullish(),
+  questionLimit: zod.number().nullish(),
 });
 
 /**
@@ -277,6 +279,7 @@ export const GetExamResponse = zod.object({
   unitId: zod.number(),
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
+  questionLimit: zod.number().nullish(),
   createdAt: zod.date(),
   questions: zod.array(
     zod.object({
@@ -305,6 +308,7 @@ export const UpdateExamBody = zod.object({
   title: zod.string(),
   unitId: zod.number(),
   timeLimit: zod.number().nullish(),
+  questionLimit: zod.number().nullish(),
 });
 
 export const UpdateExamResponse = zod.object({
@@ -313,6 +317,7 @@ export const UpdateExamResponse = zod.object({
   unitId: zod.number(),
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
+  questionLimit: zod.number().nullish(),
   createdAt: zod.date(),
 });
 

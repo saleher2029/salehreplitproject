@@ -57,6 +57,7 @@ export default function AdminExams() {
   const [unitId, setUnitId] = useState("");
   const [title, setTitle] = useState("");
   const [timeLimit, setTimeLimit] = useState("");
+  const [questionLimit, setQuestionLimit] = useState("");
 
   // Question form state
   const [editingQId, setEditingQId] = useState<number | null>(null);
@@ -80,7 +81,7 @@ export default function AdminExams() {
   const openCreate = () => {
     setEditingExamId(null);
     setActiveExamId(null);
-    setSpecId(""); setSubjectId(""); setUnitId(""); setTitle(""); setTimeLimit("");
+    setSpecId(""); setSubjectId(""); setUnitId(""); setTitle(""); setTimeLimit(""); setQuestionLimit("");
     setPhase("exam");
     setIsOpen(true);
   };
@@ -91,6 +92,7 @@ export default function AdminExams() {
     setActiveExamId(item.id);
     setTitle(item.title);
     setTimeLimit(item.timeLimit?.toString() ?? "");
+    setQuestionLimit(item.questionLimit?.toString() ?? "");
     const unit = allUnits?.find(u => u.id === item.unitId);
     const sub = allSubjects?.find(s => s.id === unit?.subjectId);
     setSubjectId(unit?.subjectId?.toString() ?? "");
@@ -119,7 +121,12 @@ export default function AdminExams() {
   // ─── Save exam (create or edit) ─────────────────────────────────────────────
   const handleSaveExam = () => {
     if (!title.trim() || !unitId) return;
-    const data = { title, unitId: parseInt(unitId), timeLimit: timeLimit ? parseInt(timeLimit) : null };
+    const data = {
+      title,
+      unitId: parseInt(unitId),
+      timeLimit: timeLimit ? parseInt(timeLimit) : null,
+      questionLimit: questionLimit ? parseInt(questionLimit) : null,
+    };
 
     if (editingExamId) {
       updateExamMut.mutate({ id: editingExamId, data }, {
@@ -291,6 +298,26 @@ export default function AdminExams() {
                   className="h-12 rounded-xl" min={1} />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-bold flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-secondary" />
+                  عدد الأسئلة المعروضة للطالب (عشوائي)
+                </label>
+                <Input
+                  type="number"
+                  value={questionLimit}
+                  onChange={e => setQuestionLimit(e.target.value)}
+                  placeholder="مثال: 30 — اتركه فارغاً لعرض جميع الأسئلة"
+                  className="h-12 rounded-xl"
+                  min={1}
+                />
+                {questionLimit && (
+                  <p className="text-xs text-secondary font-medium">
+                    ✦ سيختار النظام {questionLimit} سؤالاً عشوائياً من مجموع أسئلة الاختبار عند بدء كل طالب
+                  </p>
+                )}
+              </div>
+
               <Button
                 onClick={handleSaveExam}
                 disabled={!title.trim() || !unitId || createExamMut.isPending || updateExamMut.isPending}
@@ -437,15 +464,16 @@ export default function AdminExams() {
               <th className="px-6 py-4 border-b">الوحدة</th>
               <th className="px-6 py-4 border-b text-center">الوقت</th>
               <th className="px-6 py-4 border-b text-center">الأسئلة</th>
+              <th className="px-6 py-4 border-b text-center">العشوائي</th>
               <th className="px-6 py-4 border-b w-40">إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
+              <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
             ) : exams?.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-16 text-center">
+                <td colSpan={7} className="px-6 py-16 text-center">
                   <div className="space-y-3">
                     <BookOpen className="w-10 h-10 text-muted-foreground mx-auto" />
                     <p className="font-bold text-muted-foreground">لا توجد اختبارات بعد</p>
@@ -470,6 +498,13 @@ export default function AdminExams() {
                     className="inline-flex items-center gap-1 font-bold text-primary hover:underline">
                     <BookOpen className="w-3 h-3" />{item.questionCount} سؤال
                   </button>
+                </td>
+                <td className="px-6 py-4 text-center">
+                  {item.questionLimit ? (
+                    <span className="inline-flex items-center gap-1 text-secondary font-bold text-sm bg-secondary/10 px-2 py-0.5 rounded-lg">
+                      🎲 {item.questionLimit}
+                    </span>
+                  ) : <span className="text-muted-foreground text-xs">الكل</span>}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1">
