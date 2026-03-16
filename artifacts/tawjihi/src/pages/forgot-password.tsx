@@ -44,7 +44,8 @@ export default function ForgotPassword() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary text-primary-foreground mb-5 shadow-xl shadow-primary/30">
             <BookOpen className="w-10 h-10" />
           </div>
-          <h1 className="text-3xl font-extrabold font-serif">امتحانات توجيهي</h1>
+          <h1 className="text-3xl font-extrabold font-serif">Tawjihi-Exams</h1>
+          <p className="text-xs text-muted-foreground font-medium">By S&amp;S</p>
         </div>
 
         <Card className="p-8 rounded-3xl shadow-xl border-border/50">

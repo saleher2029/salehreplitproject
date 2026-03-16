@@ -113,7 +113,8 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground mb-6 shadow-xl shadow-primary/30 rotate-3 hover:rotate-0 transition-transform duration-300">
             <BookOpen className="w-12 h-12" />
           </div>
-          <h1 className="text-4xl font-extrabold font-serif tracking-tight text-foreground">امتحانات توجيهي</h1>
+          <h1 className="text-4xl font-extrabold font-serif tracking-tight text-foreground">Tawjihi-Exams</h1>
+          <p className="text-xs text-muted-foreground font-medium mt-1">By S&amp;S</p>
           <p className="text-muted-foreground mt-3 text-lg font-medium">منصتك الأولى للاستعداد لامتحانات الثانوية العامة</p>
         </div>
 

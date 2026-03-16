@@ -72,7 +72,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="bg-primary/10 p-1.5 rounded-xl">
               <BookOpen className="w-6 h-6" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold font-serif">امتحانات توجيهي</h1>
+            <div className="flex flex-col leading-tight">
+              <h1 className="text-xl sm:text-2xl font-bold font-serif">Tawjihi-Exams</h1>
+              <span className="text-xs text-muted-foreground font-medium">By S&amp;S</span>
+            </div>
           </Link>
 
           {/* Navigation + User */}
