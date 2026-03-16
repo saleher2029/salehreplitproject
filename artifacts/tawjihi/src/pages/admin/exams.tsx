@@ -50,6 +50,7 @@ export default function AdminExams() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingExamId, setEditingExamId] = useState<number | null>(null);
   const [activeExamId, setActiveExamId] = useState<number | null>(null); // exam we're adding questions to
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Exam form state
   const [specId, setSpecId] = useState("");
@@ -82,6 +83,7 @@ export default function AdminExams() {
     setEditingExamId(null);
     setActiveExamId(null);
     setSpecId(""); setSubjectId(""); setUnitId(""); setTitle(""); setTimeLimit(""); setQuestionLimit("");
+    setSaveError(null);
     setPhase("exam");
     setIsOpen(true);
   };
@@ -98,6 +100,7 @@ export default function AdminExams() {
     setSubjectId(unit?.subjectId?.toString() ?? "");
     setSpecId(sub?.specializationId?.toString() ?? "");
     setUnitId(item.unitId?.toString() ?? "");
+    setSaveError(null);
     setPhase("exam");
     setIsOpen(true);
   };
@@ -121,6 +124,7 @@ export default function AdminExams() {
   // ─── Save exam (create or edit) ─────────────────────────────────────────────
   const handleSaveExam = () => {
     if (!title.trim() || !unitId) return;
+    setSaveError(null);
     const data = {
       title,
       unitId: parseInt(unitId),
@@ -132,9 +136,11 @@ export default function AdminExams() {
       updateExamMut.mutate({ id: editingExamId, data }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
-          // After editing, go to questions phase
           setPhase("questions");
           resetQForm();
+        },
+        onError: (err: any) => {
+          setSaveError(err?.message || "فشل حفظ الاختبار — تحقق من صلاحياتك أو حاول مجدداً");
         },
       });
     } else {
@@ -145,6 +151,9 @@ export default function AdminExams() {
           setEditingExamId(created.id);
           setPhase("questions");
           resetQForm();
+        },
+        onError: (err: any) => {
+          setSaveError(err?.message || "فشل إنشاء الاختبار — تحقق من صلاحياتك أو حاول مجدداً");
         },
       });
     }
@@ -317,6 +326,13 @@ export default function AdminExams() {
                   </p>
                 )}
               </div>
+
+              {saveError && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-sm font-medium border border-destructive/20">
+                  <span className="text-base">⚠</span>
+                  {saveError}
+                </div>
+              )}
 
               <Button
                 onClick={handleSaveExam}

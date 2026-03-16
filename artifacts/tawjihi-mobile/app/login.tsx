@@ -24,7 +24,7 @@ type AuthResponse = {
   token: string;
   user: { id: number; name: string; email?: string | null; role: string };
 };
-type Mode = "main" | "login" | "register";
+type Mode = "main" | "login" | "register" | "admin";
 
 export default function LoginScreen() {
   const { isDark, C } = useAppTheme();
@@ -35,7 +35,10 @@ export default function LoginScreen() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [adminUser, setAdminUser] = useState("");
+  const [adminPass, setAdminPass] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [showAdminPass, setShowAdminPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -69,6 +72,23 @@ export default function LoginScreen() {
     } catch (e: any) { setError(e.message || "حدث خطأ"); setLoading(false); }
   };
 
+  const handleAdminLogin = async () => {
+    if (!adminUser.trim()) { setError("أدخل اسم المستخدم"); return; }
+    if (!adminPass) { setError("أدخل كلمة المرور"); return; }
+    setError(""); setLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const res = await apiRequest<AuthResponse>("/api/auth/admin", {
+        method: "POST",
+        body: JSON.stringify({ username: adminUser.trim(), password: adminPass }),
+      });
+      await login(res.token, res.user);
+      router.replace("/(main)");
+    } catch (e: any) { setError(e.message || "اسم المستخدم أو كلمة المرور غير صحيحة"); setLoading(false); }
+  };
+
+  const goBack = () => { setMode("main"); setError(""); };
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
       <ScrollView
@@ -90,9 +110,9 @@ export default function LoginScreen() {
 
         {/* ── Card ── */}
         <View style={[styles.card, { backgroundColor: C.card, borderColor: C.border }]}>
+          {/* ─── Main Mode ─── */}
           {mode === "main" && (
             <View style={styles.formGap}>
-              {/* Guest */}
               <Pressable
                 style={({ pressed }) => [styles.primaryBtn, { backgroundColor: C.primary, opacity: pressed ? 0.85 : 1 }]}
                 onPress={handleGuest}
@@ -106,14 +126,12 @@ export default function LoginScreen() {
                 )}
               </Pressable>
 
-              {/* Divider */}
               <View style={styles.orRow}>
                 <View style={[styles.orLine, { backgroundColor: C.border }]} />
                 <Text style={[styles.orText, { color: C.textMuted, fontFamily: "Tajawal_400Regular" }]}>أو بحساب</Text>
                 <View style={[styles.orLine, { backgroundColor: C.border }]} />
               </View>
 
-              {/* Email Login */}
               <Pressable
                 style={({ pressed }) => [styles.outlineBtn, { borderColor: C.border, backgroundColor: pressed ? C.muted : "transparent" }]}
                 onPress={() => { setError(""); setMode("login"); }}
@@ -124,7 +142,6 @@ export default function LoginScreen() {
                 <Feather name="mail" size={18} color={C.textSecondary} />
               </Pressable>
 
-              {/* Register */}
               <Pressable
                 style={({ pressed }) => [styles.outlineBtn, { borderColor: C.border, backgroundColor: pressed ? C.muted : "transparent" }]}
                 onPress={() => { setError(""); setMode("register"); }}
@@ -135,21 +152,23 @@ export default function LoginScreen() {
                 <Feather name="user-plus" size={18} color={C.primary} />
               </Pressable>
 
-              {/* Divider */}
               <View style={[styles.orLine, { backgroundColor: C.border, marginTop: 4 }]} />
 
-              {/* Admin */}
-              <Pressable style={{ alignSelf: "center", paddingVertical: 4, flexDirection: "row-reverse", alignItems: "center", gap: 6 }}>
+              {/* Admin — now properly connected */}
+              <Pressable
+                style={({ pressed }) => [styles.adminBtn, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => { setError(""); setAdminUser(""); setAdminPass(""); setMode("admin"); }}
+              >
                 <Text style={[styles.adminText, { color: C.textMuted, fontFamily: "Tajawal_400Regular" }]}>دخول الإدارة</Text>
                 <Feather name="shield" size={14} color={C.textMuted} />
               </Pressable>
             </View>
           )}
 
+          {/* ─── Email / Register Mode ─── */}
           {(mode === "login" || mode === "register") && (
             <View style={styles.formGap}>
-              {/* Back */}
-              <Pressable onPress={() => { setMode("main"); setError(""); }} style={styles.backRow}>
+              <Pressable onPress={goBack} style={styles.backRow}>
                 <Text style={[styles.backText, { color: C.primary, fontFamily: "Tajawal_500Medium" }]}>رجوع</Text>
                 <Feather name="arrow-right" size={18} color={C.primary} />
               </Pressable>
@@ -202,12 +221,7 @@ export default function LoginScreen() {
                 </Pressable>
               </View>
 
-              {!!error && (
-                <View style={[styles.errBox, { backgroundColor: C.errorGlow }]}>
-                  <Text style={[styles.errText, { color: C.error, fontFamily: "Tajawal_400Regular" }]}>{error}</Text>
-                  <Feather name="alert-circle" size={14} color={C.error} />
-                </View>
-              )}
+              {!!error && <ErrorBox error={error} C={C} />}
 
               <Pressable
                 style={({ pressed }) => [styles.primaryBtn, { backgroundColor: C.primary, opacity: pressed ? 0.85 : 1 }]}
@@ -234,9 +248,88 @@ export default function LoginScreen() {
               </Pressable>
             </View>
           )}
+
+          {/* ─── Admin Mode ─── */}
+          {mode === "admin" && (
+            <View style={styles.formGap}>
+              <Pressable onPress={goBack} style={styles.backRow}>
+                <Text style={[styles.backText, { color: C.primary, fontFamily: "Tajawal_500Medium" }]}>رجوع</Text>
+                <Feather name="arrow-right" size={18} color={C.primary} />
+              </Pressable>
+
+              {/* Admin Header */}
+              <View style={styles.adminHeader}>
+                <View style={[styles.adminIconWrap, { backgroundColor: C.secondary + "1A" }]}>
+                  <Feather name="shield" size={22} color={C.secondary} />
+                </View>
+                <Text style={[styles.formTitle, { color: C.text, fontFamily: "Tajawal_700Bold", marginBottom: 0 }]}>
+                  دخول الإدارة
+                </Text>
+                <Text style={[{ color: C.textMuted, fontFamily: "Tajawal_400Regular", fontSize: 13, textAlign: "center" }]}>
+                  للمشرفين والمدراء فقط
+                </Text>
+              </View>
+
+              {/* Username */}
+              <View style={[styles.inputWrap, { borderColor: C.input, backgroundColor: C.cardSecondary }]}>
+                <TextInput
+                  style={[styles.input, { color: C.text, fontFamily: "Tajawal_400Regular" }]}
+                  placeholder="اسم المستخدم"
+                  placeholderTextColor={C.textMuted}
+                  value={adminUser}
+                  onChangeText={setAdminUser}
+                  textAlign="right"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Feather name="user" size={18} color={C.textMuted} />
+              </View>
+
+              {/* Password */}
+              <View style={[styles.inputWrap, { borderColor: C.input, backgroundColor: C.cardSecondary }]}>
+                <TextInput
+                  style={[styles.input, { color: C.text, fontFamily: "Tajawal_400Regular" }]}
+                  placeholder="كلمة المرور"
+                  placeholderTextColor={C.textMuted}
+                  value={adminPass}
+                  onChangeText={setAdminPass}
+                  secureTextEntry={!showAdminPass}
+                  textAlign="right"
+                  autoCapitalize="none"
+                />
+                <Pressable onPress={() => setShowAdminPass(!showAdminPass)} hitSlop={12}>
+                  <Feather name={showAdminPass ? "eye-off" : "eye"} size={18} color={C.textMuted} />
+                </Pressable>
+              </View>
+
+              {!!error && <ErrorBox error={error} C={C} />}
+
+              <Pressable
+                style={({ pressed }) => [styles.primaryBtn, { backgroundColor: C.secondary, opacity: pressed ? 0.85 : 1 }]}
+                onPress={handleAdminLogin}
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator color="#fff" size="small" /> : (
+                  <>
+                    <Text style={[styles.primaryBtnText, { fontFamily: "Tajawal_700Bold" }]}>دخول كمدير</Text>
+                    <Feather name="shield" size={18} color="#fff" />
+                  </>
+                )}
+              </Pressable>
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function ErrorBox({ error, C }: { error: string; C: typeof Colors.light }) {
+  return (
+    <View style={[styles.errBox, { backgroundColor: C.errorGlow }]}>
+      <Text style={[styles.errText, { color: C.error, fontFamily: "Tajawal_400Regular" }]}>{error}</Text>
+      <Feather name="alert-circle" size={14} color={C.error} />
+    </View>
   );
 }
 
@@ -256,10 +349,13 @@ const styles = StyleSheet.create({
   orText: { fontSize: 13 },
   outlineBtn: { height: 52, borderRadius: 14, borderWidth: 1, flexDirection: "row-reverse", justifyContent: "center", alignItems: "center", gap: 10, borderColor: "transparent" },
   outlineBtnText: { fontSize: 15 },
+  adminBtn: { alignSelf: "center", paddingVertical: 4, flexDirection: "row-reverse", alignItems: "center", gap: 6 },
   adminText: { fontSize: 13 },
   backRow: { flexDirection: "row-reverse", alignItems: "center", gap: 6 },
   backText: { fontSize: 14 },
   formTitle: { fontSize: 22, textAlign: "right", marginBottom: 4 },
+  adminHeader: { alignItems: "center", gap: 8, marginBottom: 4 },
+  adminIconWrap: { width: 52, height: 52, borderRadius: 16, justifyContent: "center", alignItems: "center" },
   inputWrap: { flexDirection: "row-reverse", alignItems: "center", borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, height: 50, gap: 10 },
   input: { flex: 1, fontSize: 14, height: 50 },
   errBox: { flexDirection: "row-reverse", alignItems: "center", gap: 8, padding: 12, borderRadius: 10 },
