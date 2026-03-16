@@ -9,13 +9,13 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import Colors from "@/constants/colors";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/utils/api";
 
@@ -38,9 +38,7 @@ function getGrade(pct: number, C: typeof Colors.light) {
 const formatDate = (s: string) => new Date(s).toLocaleDateString("ar-SA", { day: "numeric", month: "long", year: "numeric" });
 
 export default function HistoryScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const C = isDark ? Colors.dark : Colors.light;
+  const { isDark, C } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const [refreshing, setRefreshing] = useState(false);

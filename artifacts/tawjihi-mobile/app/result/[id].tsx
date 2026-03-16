@@ -10,13 +10,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import Colors from "@/constants/colors";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/utils/api";
 
@@ -45,9 +45,7 @@ interface ResultDetail {
 
 export default function ResultScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const C = isDark ? Colors.dark : Colors.light;
+  const { isDark, C } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const [showAnswers, setShowAnswers] = useState(false);

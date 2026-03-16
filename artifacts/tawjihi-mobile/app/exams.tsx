@@ -10,13 +10,13 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import Colors from "@/constants/colors";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { apiRequest } from "@/utils/api";
 
 interface Exam {
@@ -31,9 +31,7 @@ interface Exam {
 
 export default function ExamsScreen() {
   const { unitId, name, subjectName } = useLocalSearchParams<{ unitId: string; name: string; subjectName: string }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const C = isDark ? Colors.dark : Colors.light;
+  const { isDark, C } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
 

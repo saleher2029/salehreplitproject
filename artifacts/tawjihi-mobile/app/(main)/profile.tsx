@@ -11,13 +11,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import Colors from "@/constants/colors";
+import { useAppTheme } from "@/hooks/useAppTheme";
+import { useTheme, type ThemePreference } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/utils/api";
 
@@ -28,9 +29,8 @@ interface SiteSettings {
 }
 
 export default function ProfileScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const C = isDark ? Colors.dark : Colors.light;
+  const { isDark, C } = useAppTheme();
+  const { preference, setPreference } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
 
@@ -65,12 +65,17 @@ export default function ProfileScreen() {
     return { bg: C.muted, text: C.textMuted };
   };
 
+  const themeOptions: { value: ThemePreference; label: string; icon: keyof typeof Feather.glyphMap }[] = [
+    { value: "light", label: "فاتح", icon: "sun" },
+    { value: "dark", label: "داكن", icon: "moon" },
+    { value: "system", label: "تلقائي", icon: "smartphone" },
+  ];
+
   return (
     <View style={[styles.wrap, { backgroundColor: C.background }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: bottomPad + 100 }} showsVerticalScrollIndicator={false}>
         {/* ── Header ── */}
         <View style={[styles.header, { paddingTop: topPad + 20, backgroundColor: C.card, borderBottomColor: C.border }]}>
-          {/* User Avatar + Info */}
           <View style={styles.userRow}>
             <View style={[styles.avatar, { backgroundColor: C.primary + "18", borderColor: C.primary + "30" }]}>
               <Text style={[styles.avatarLetter, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>
@@ -87,6 +92,52 @@ export default function ProfileScreen() {
                   {roleLabel(user?.role || "guest")}
                 </Text>
               </View>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Theme Toggle ── */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
+          <Text style={[styles.sectionLabel, { color: C.textMuted, fontFamily: "Tajawal_500Medium" }]}>مظهر التطبيق</Text>
+          <View style={[styles.themeCard, { backgroundColor: C.card, borderColor: C.border }]}>
+            <View style={[styles.themeIconWrap, { backgroundColor: C.primary + "18" }]}>
+              <Feather name={isDark ? "moon" : "sun"} size={18} color={C.primary} />
+            </View>
+            <View style={styles.themeInfo}>
+              <Text style={[styles.themeTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>الوضع</Text>
+              <Text style={[styles.themeSub, { color: C.textMuted, fontFamily: "Tajawal_400Regular" }]}>
+                {preference === "system" ? "يتبع النظام" : preference === "dark" ? "الوضع الداكن مفعّل" : "الوضع الفاتح مفعّل"}
+              </Text>
+            </View>
+            <View style={[styles.themeSegment, { backgroundColor: C.background, borderColor: C.border }]}>
+              {themeOptions.map((opt) => {
+                const active = preference === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setPreference(opt.value);
+                    }}
+                    style={[
+                      styles.themeSegBtn,
+                      active && { backgroundColor: C.primary },
+                    ]}
+                  >
+                    <Feather
+                      name={opt.icon}
+                      size={14}
+                      color={active ? "#fff" : C.textMuted}
+                    />
+                    <Text style={[
+                      styles.themeSegLabel,
+                      { color: active ? "#fff" : C.textMuted, fontFamily: "Tajawal_700Bold" },
+                    ]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
         </View>
@@ -280,4 +331,12 @@ const styles = StyleSheet.create({
   cancelText: { fontSize: 14 },
   confirmBtn: { flex: 1, height: 48, borderRadius: 12, justifyContent: "center", alignItems: "center" },
   confirmText: { color: "#fff", fontSize: 14 },
+  themeCard: { flexDirection: "row-reverse", alignItems: "center", padding: 14, borderRadius: 14, borderWidth: 1, gap: 12, flexWrap: "wrap" },
+  themeIconWrap: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center", flexShrink: 0 },
+  themeInfo: { flex: 1, alignItems: "flex-end", gap: 2, minWidth: 80 },
+  themeTitle: { fontSize: 15 },
+  themeSub: { fontSize: 12 },
+  themeSegment: { flexDirection: "row-reverse", borderRadius: 10, borderWidth: 1, padding: 3, gap: 3 },
+  themeSegBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8 },
+  themeSegLabel: { fontSize: 12 },
 });

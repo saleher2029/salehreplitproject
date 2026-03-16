@@ -11,12 +11,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useColorScheme,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Colors from "@/constants/colors";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/utils/api";
 
@@ -27,9 +27,7 @@ type AuthResponse = {
 type Mode = "main" | "login" | "register";
 
 export default function LoginScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const C = isDark ? Colors.dark : Colors.light;
+  const { isDark, C } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
 

@@ -10,13 +10,13 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import Colors from "@/constants/colors";
+import { useAppTheme } from "@/hooks/useAppTheme";
 import { apiRequest } from "@/utils/api";
 
 interface Unit { id: number; name: string; subjectId: number; }
@@ -25,9 +25,7 @@ export default function UnitsScreen() {
   const { subjectId, name, specializationId, specializationName } = useLocalSearchParams<{
     subjectId: string; name: string; specializationId: string; specializationName: string;
   }>();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const C = isDark ? Colors.dark : Colors.light;
+  const { isDark, C } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
 
