@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { useGetSpecializations, useCreateSpecialization, useUpdateSpecialization, useDeleteSpecialization } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
+import { useApiOpts } from "@/hooks/use-api-opts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function AdminSpecializations() {
-  const { token } = useAuth();
   const queryClient = useQueryClient();
-  const _h: Record<string, string> = token ? { 'Authorization': `Bearer ` } : {};
-  const options = { request: { headers: _h } };
+  const options = useApiOpts();
   
   const { data, isLoading } = useGetSpecializations(options);
   const createMut = useCreateSpecialization(options);

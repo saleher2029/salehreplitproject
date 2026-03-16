@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { useGetSubjects, useGetSpecializations, useCreateSubject, useUpdateSubject, useDeleteSubject } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
+import { useApiOpts } from "@/hooks/use-api-opts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function AdminSubjects() {
-  const { token } = useAuth();
   const queryClient = useQueryClient();
-  const _h: Record<string, string> = token ? { 'Authorization': `Bearer ` } : {};
-  const options = { request: { headers: _h } };
+  const options = useApiOpts();
   
   const { data: subjects, isLoading } = useGetSubjects({}, options);
   const { data: specializations } = useGetSpecializations(options);

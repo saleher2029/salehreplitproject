@@ -1,14 +1,12 @@
 import { useGetUsers, useUpdateUser, useDeleteUser } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
+import { useApiOpts } from "@/hooks/use-api-opts";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 
 export default function AdminUsers() {
-  const { token } = useAuth();
   const queryClient = useQueryClient();
-  const _h: Record<string, string> = token ? { 'Authorization': `Bearer ` } : {};
-  const options = { request: { headers: _h } };
+  const options = useApiOpts();
   
   const { data: users, isLoading } = useGetUsers(options);
   const updateMut = useUpdateUser(options);
