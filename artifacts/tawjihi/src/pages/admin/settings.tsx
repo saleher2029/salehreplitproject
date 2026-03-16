@@ -62,16 +62,16 @@ export default function AdminSettings() {
           <div className="space-y-3">
             <label className="text-sm font-bold flex items-center gap-2">
               <Send className="w-4 h-4 text-blue-500" />
-              معرّف تيلجرام
+              رقم تيلجرام
             </label>
             <Input
               value={telegramUsername}
               onChange={e => setTelegramUsername(e.target.value)}
               className="h-12 rounded-xl text-left"
               dir="ltr"
-              placeholder="مثال: tawjihi_support"
+              placeholder="مثال: +970591234567"
             />
-            <p className="text-xs text-muted-foreground">اكتب المعرّف بدون علامة @ ، سيظهر زر التيلجرام في شريط التواصل.</p>
+            <p className="text-xs text-muted-foreground">اكتب الرقم مع رمز الدولة، سيظهر زر التيلجرام في شريط التواصل.</p>
           </div>
 
           <div className="space-y-3">

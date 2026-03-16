@@ -50,12 +50,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
             {settings?.telegramUsername && (
               <a
-                href={`https://t.me/${settings.telegramUsername}`}
+                href={`https://t.me/${settings.telegramUsername.replace(/\D/g, "")}`}
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors font-bold"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-4 h-4 text-blue-300" />
                 تيلجرام
               </a>
             )}
