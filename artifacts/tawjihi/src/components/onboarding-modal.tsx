@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookOpen, Sparkles } from "lucide-react";
 
+function safeGet(key: string) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function safeSet(key: string, val: string) {
+  try { localStorage.setItem(key, val); } catch {}
+}
+
 export function OnboardingModal() {
   const { user, token, updateUser } = useAuth();
   const [name, setName] = useState("");
@@ -14,7 +21,7 @@ export function OnboardingModal() {
   if (!user) return null;
 
   const storageKey = `tawjihi_welcomed_${user.id}`;
-  const alreadyWelcomed = localStorage.getItem(storageKey) === "done";
+  const alreadyWelcomed = safeGet(storageKey) === "done";
   if (alreadyWelcomed) return null;
 
   const handleSave = async (e: React.FormEvent) => {
@@ -38,7 +45,7 @@ export function OnboardingModal() {
       if (!res.ok) throw new Error();
       const updated = await res.json();
       updateUser({ name: updated.name });
-      localStorage.setItem(storageKey, "done");
+      safeSet(storageKey, "done");
     } catch {
       setError("حدث خطأ، يرجى المحاولة مرة أخرى");
       setLoading(false);
@@ -46,7 +53,7 @@ export function OnboardingModal() {
   };
 
   const handleSkip = () => {
-    localStorage.setItem(storageKey, "done");
+    safeSet(storageKey, "done");
     updateUser({});
   };
 
