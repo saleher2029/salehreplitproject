@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -46,50 +45,50 @@ export default function UnitsScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  const renderItem = ({ item, index }: { item: Unit; index: number }) => (
+  const renderItem = ({ item }: { item: Unit }) => (
     <Pressable
-      style={({ pressed }) => [styles.card, { backgroundColor: C.card, opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: pressed ? C.primary + "08" : C.card, borderColor: pressed ? C.primary : C.border, opacity: pressed ? 0.9 : 1 },
+      ]}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({ pathname: "/exams", params: { unitId: item.id, name: item.name, subjectName: name } });
       }}
     >
+      <View style={styles.cardLeft}>
+        <View style={[styles.bookmarkIcon, { borderColor: C.border }]}>
+          <Feather name="bookmark" size={18} color={C.textSecondary} />
+        </View>
+        <Text style={[styles.cardTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]} numberOfLines={2}>{item.name}</Text>
+      </View>
       <Feather name="chevron-left" size={18} color={C.textMuted} />
-      <Text style={[styles.cardTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]} numberOfLines={2}>
-        {item.name}
-      </Text>
-      <LinearGradient colors={["#6C63FF", "#B15EFF"]} style={styles.numBadge} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        <Text style={[styles.numText, { fontFamily: "Tajawal_700Bold" }]}>{index + 1}</Text>
-      </LinearGradient>
     </Pressable>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
-      <LinearGradient
-        colors={isDark ? ["#130F3A", "#07061A"] : ["#6C63FF", "#B15EFF"]}
-        style={[styles.header, { paddingTop: topPad + 12 }]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      >
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <View style={styles.backCircle}>
-            <Feather name="arrow-right" size={20} color="#fff" />
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: C.card, borderBottomColor: C.border }]}>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => router.back()} style={[styles.backBtn, { borderColor: C.border }]}>
+            <Feather name="arrow-right" size={18} color={C.primary} />
+            <Text style={[styles.backText, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>العودة للمواد</Text>
+          </Pressable>
+          <View style={styles.headerText}>
+            <Text style={[styles.headerTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>اختر الوحدة</Text>
+            <Text style={[styles.headerSub, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>
+              الوحدات الدراسية ضمن هذه المادة
+            </Text>
           </View>
-        </Pressable>
-        <View style={styles.headerText}>
-          {specializationName ? (
-            <Text style={[styles.headerSub, { fontFamily: "Tajawal_400Regular" }]}>{specializationName}</Text>
-          ) : null}
-          <Text style={[styles.headerTitle, { fontFamily: "Tajawal_700Bold" }]} numberOfLines={1}>{name}</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {isLoading && <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>}
 
       {!!error && (
         <View style={styles.center}>
           <Feather name="wifi-off" size={40} color={C.error} />
-          <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_400Regular", fontSize: 15 }]}>تعذّر التحميل</Text>
           <Pressable onPress={() => refetch()} style={[styles.retryBtn, { backgroundColor: C.primary }]}>
             <Text style={[{ color: "#fff", fontFamily: "Tajawal_700Bold", fontSize: 14 }]}>إعادة المحاولة</Text>
           </Pressable>
@@ -98,8 +97,9 @@ export default function UnitsScreen() {
 
       {!isLoading && !error && (!units || units.length === 0) && (
         <View style={styles.center}>
-          <Feather name="layers" size={48} color={C.textMuted} />
-          <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_400Regular", fontSize: 15 }]}>لا توجد وحدات</Text>
+          <View style={[styles.emptyBox, { borderColor: C.border }]}>
+            <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_700Bold", fontSize: 15 }]}>لا توجد وحدات في هذه المادة</Text>
+          </View>
         </View>
       )}
 
@@ -119,17 +119,19 @@ export default function UnitsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row-reverse", alignItems: "center", paddingHorizontal: 16, paddingBottom: 20, gap: 12 },
-  backBtn: {},
-  backCircle: { width: 40, height: 40, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center" },
-  headerText: { flex: 1, alignItems: "flex-end" },
-  headerSub: { fontSize: 12, color: "rgba(255,255,255,0.65)" },
-  headerTitle: { fontSize: 20, color: "#fff" },
-  list: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 40 },
-  card: { flexDirection: "row-reverse", alignItems: "center", padding: 16, borderRadius: 16, marginBottom: 10, gap: 14 },
-  numBadge: { width: 38, height: 38, borderRadius: 12, justifyContent: "center", alignItems: "center", flexShrink: 0 },
-  numText: { fontSize: 15, color: "#fff" },
-  cardTitle: { flex: 1, fontSize: 16, textAlign: "right" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14 },
+  header: { paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, gap: 12 },
+  headerRow: { flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
+  headerText: { alignItems: "flex-end", flex: 1 },
+  headerTitle: { fontSize: 22 },
+  headerSub: { fontSize: 13, textAlign: "right" },
+  backBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, flexShrink: 0 },
+  backText: { fontSize: 13 },
+  list: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40 },
+  card: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", padding: 14, borderRadius: 16, borderWidth: 1, marginBottom: 10 },
+  cardLeft: { flexDirection: "row-reverse", alignItems: "center", gap: 12, flex: 1 },
+  bookmarkIcon: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, justifyContent: "center", alignItems: "center", flexShrink: 0 },
+  cardTitle: { fontSize: 16, textAlign: "right", flex: 1 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14, padding: 24 },
   retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
+  emptyBox: { padding: 32, borderRadius: 20, borderWidth: 1.5, borderStyle: "dashed", alignItems: "center" },
 });

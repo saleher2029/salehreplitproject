@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -22,31 +21,27 @@ import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/utils/api";
 
 interface Specialization { id: number; name: string; }
-
-const CARD_GRADIENTS = [
-  ["#6C63FF", "#B15EFF"],
-  ["#FF6B6B", "#FF8E53"],
-  ["#00C896", "#00A8CC"],
-  ["#FFB347", "#FF6B6B"],
-  ["#4ECDC4", "#44A08D"],
-  ["#A8EDEA", "#FED6E3"],
-  ["#F093FB", "#F5576C"],
-  ["#4FACFE", "#00F2FE"],
-] as const;
-
-const SPEC_ICONS: Array<keyof typeof Feather.glyphMap> = ["book-open", "cpu", "globe", "heart", "layers", "star", "zap", "compass"];
+interface SiteSettings { whatsappNumber: string; telegramUsername: string; subscriptionInfo: string; }
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const C = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+
+  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const { data: specs, isLoading, error, refetch } = useQuery<Specialization[]>({
     queryKey: ["specializations"],
     queryFn: () => apiRequest<Specialization[]>("/api/specializations"),
+  });
+
+  const { data: settings } = useQuery<SiteSettings>({
+    queryKey: ["site-settings"],
+    queryFn: () => apiRequest<SiteSettings>("/api/settings"),
   });
 
   const onRefresh = useCallback(async () => {
@@ -55,111 +50,139 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const renderItem = ({ item, index }: { item: Specialization; index: number }) => (
+    <Pressable
+      style={({ pressed }) => [styles.specCard, { backgroundColor: C.card, borderColor: C.border, transform: [{ scale: pressed ? 0.97 : 1 }], opacity: pressed ? 0.9 : 1 }]}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push({ pathname: "/subjects", params: { specializationId: item.id, name: item.name } });
+      }}
+    >
+      {/* Decorative top-right circle */}
+      <View style={[styles.specDecor, { backgroundColor: C.primary + "0D" }]} />
 
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return "صباح النشاط";
-    if (h < 17) return "مساء التفوق";
-    return "مساء الدراسة";
-  };
+      <View style={[styles.specIconWrap, { backgroundColor: C.primary + "1A" }]}>
+        <Feather name="layers" size={28} color={C.primary} />
+      </View>
 
-  const renderItem = ({ item, index }: { item: Specialization; index: number }) => {
-    const grad = CARD_GRADIENTS[index % CARD_GRADIENTS.length];
-    const icon = SPEC_ICONS[index % SPEC_ICONS.length];
-    return (
-      <Pressable
-        style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] }]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.push({ pathname: "/subjects", params: { specializationId: item.id, name: item.name } });
-        }}
-      >
-        <LinearGradient colors={[grad[0], grad[1]]} style={styles.specCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <View style={styles.specIconBg}>
-            <Feather name={icon} size={26} color="#fff" />
-          </View>
-          <Text style={[styles.specName, { fontFamily: "Tajawal_700Bold" }]} numberOfLines={2}>{item.name}</Text>
-          <View style={styles.specArrow}>
-            <Feather name="arrow-left" size={16} color="rgba(255,255,255,0.7)" />
-          </View>
-        </LinearGradient>
-      </Pressable>
-    );
-  };
+      <Text style={[styles.specName, { color: C.text, fontFamily: "Tajawal_700Bold" }]} numberOfLines={2}>
+        {item.name}
+      </Text>
+
+      <View style={styles.specFooter}>
+        <Feather name="chevron-left" size={14} color={C.textMuted} />
+        <Text style={[styles.specLink, { color: C.textMuted, fontFamily: "Tajawal_700Bold" }]}>عرض المواد</Text>
+      </View>
+    </Pressable>
+  );
+
+  const hasBanner = settings && (settings.subscriptionInfo || settings.whatsappNumber || settings.telegramUsername);
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
       {/* Header */}
-      <LinearGradient
-        colors={isDark ? ["#130F3A", "#07061A"] : ["#6C63FF", "#9B59F5"]}
-        style={[styles.header, { paddingTop: topPad + 16 }]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerRow}>
-          <Pressable
-            style={[styles.avatarBtn, { backgroundColor: "rgba(255,255,255,0.2)" }]}
-            onPress={() => router.push("/(main)/profile")}
-          >
-            <Text style={[styles.avatarLetter, { fontFamily: "Tajawal_700Bold" }]}>
-              {(user?.name || "T")[0].toUpperCase()}
-            </Text>
-          </Pressable>
-          <View style={styles.headerText}>
-            <Text style={[styles.greetText, { fontFamily: "Tajawal_400Regular" }]}>{greeting()}</Text>
-            <Text style={[styles.nameText, { fontFamily: "Tajawal_700Bold" }]} numberOfLines={1}>
-              {user?.name || "طالب"}
-            </Text>
+      <View style={[styles.header, { paddingTop: topPad, backgroundColor: C.card, borderBottomColor: C.border }]}>
+        {/* Subscription Banner */}
+        {!!hasBanner && (
+          <View style={[styles.banner, { backgroundColor: C.primary }]}>
+            <View style={styles.bannerContent}>
+              <Text style={[styles.bannerText, { fontFamily: "Tajawal_500Medium" }]} numberOfLines={1}>
+                {settings?.subscriptionInfo || "اشترك الآن للوصول إلى كافة الامتحانات!"}
+              </Text>
+              <View style={styles.bannerLinks}>
+                {settings?.whatsappNumber ? (
+                  <View style={styles.bannerPill}>
+                    <Text style={[styles.bannerPillText, { fontFamily: "Tajawal_700Bold" }]}>واتساب</Text>
+                    <Feather name="message-circle" size={12} color="#fff" />
+                  </View>
+                ) : null}
+                {settings?.telegramUsername ? (
+                  <View style={styles.bannerPill}>
+                    <Text style={[styles.bannerPillText, { fontFamily: "Tajawal_700Bold" }]}>تيليغرام</Text>
+                    <Feather name="send" size={12} color="#fff" />
+                  </View>
+                ) : null}
+              </View>
+            </View>
           </View>
-        </View>
+        )}
 
-        <View style={styles.subtitleRow}>
-          <View style={[styles.subtitleBadge, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
-            <Feather name="target" size={14} color="#fff" />
-            <Text style={[styles.subtitleText, { fontFamily: "Tajawal_500Medium" }]}>اختر تخصصك وابدأ الآن</Text>
+        {/* Nav Row */}
+        <View style={styles.navRow}>
+          {/* Logo */}
+          <View style={styles.logoRow}>
+            <View style={[styles.logoIcon, { backgroundColor: C.primary + "18" }]}>
+              <Feather name="book-open" size={20} color={C.primary} />
+            </View>
+            <View>
+              <Text style={[styles.logoTitle, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>Tawjihi-Exams</Text>
+              <Text style={[styles.logoSub, { color: C.textMuted, fontFamily: "Tajawal_400Regular" }]}>By S&S</Text>
+            </View>
+          </View>
+
+          {/* User + History */}
+          <View style={styles.navRight}>
+            <Pressable
+              style={[styles.navPill, { backgroundColor: C.primary + "18" }]}
+              onPress={() => router.push("/(main)/history")}
+            >
+              <Text style={[styles.navPillText, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>امتحاناتي</Text>
+              <Feather name="award" size={14} color={C.primary} />
+            </Pressable>
+            <Pressable
+              style={[styles.userAvatar, { backgroundColor: C.primary + "18", borderColor: C.primary + "30" }]}
+              onPress={() => router.push("/(main)/profile")}
+            >
+              <Text style={[styles.userInitial, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>
+                {(user?.name || "T")[0].toUpperCase()}
+              </Text>
+            </Pressable>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       {isLoading && (
         <View style={styles.center}>
+          <View style={[styles.spinnerWrap, { borderColor: C.primary }]} />
           <ActivityIndicator size="large" color={C.primary} />
         </View>
       )}
 
       {!!error && (
         <View style={styles.center}>
-          <View style={[styles.errorCard, { backgroundColor: C.card }]}>
-            <Feather name="wifi-off" size={36} color={C.error} />
-            <Text style={[styles.errorTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>تعذّر الاتصال</Text>
-            <Pressable onPress={() => refetch()} style={{ backgroundColor: C.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
-              <Text style={[{ color: "#fff", fontFamily: "Tajawal_700Bold", fontSize: 15 }]}>إعادة المحاولة</Text>
-            </Pressable>
-          </View>
+          <Feather name="wifi-off" size={40} color={C.error} />
+          <Text style={[styles.errText, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>تعذّر الاتصال</Text>
+          <Pressable onPress={() => refetch()} style={[styles.retryBtn, { backgroundColor: C.primary }]}>
+            <Text style={[{ color: "#fff", fontFamily: "Tajawal_700Bold", fontSize: 14 }]}>إعادة المحاولة</Text>
+          </Pressable>
         </View>
       )}
 
-      {!isLoading && !error && (!specs || specs.length === 0) && (
-        <View style={styles.center}>
-          <Feather name="inbox" size={48} color={C.textMuted} />
-          <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_400Regular", fontSize: 15 }]}>لا توجد تخصصات بعد</Text>
-        </View>
-      )}
-
-      {!isLoading && !!specs && specs.length > 0 && (
+      {!isLoading && !error && (
         <FlatList
-          data={specs}
+          data={specs || []}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
           numColumns={2}
-          columnWrapperStyle={styles.row}
+          columnWrapperStyle={styles.specRow}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad + 100 }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
-          ListHeaderComponent={
-            <Text style={[styles.listHeader, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>التخصصات</Text>
-          }
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View style={styles.pageHeader}>
+              <Text style={[styles.pageTitle, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>ما هو تخصصك؟</Text>
+              <Text style={[styles.pageSub, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>
+                اختر تخصصك لعرض المواد والامتحانات الخاصة بك
+              </Text>
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_400Regular", fontSize: 15, textAlign: "center" }]}>
+                لا توجد تخصصات متاحة حالياً
+              </Text>
+            </View>
+          }
         />
       )}
     </View>
@@ -168,24 +191,37 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingBottom: 24 },
-  headerRow: { flexDirection: "row-reverse", alignItems: "center", gap: 14, marginBottom: 14 },
-  avatarBtn: { width: 48, height: 48, borderRadius: 16, justifyContent: "center", alignItems: "center" },
-  avatarLetter: { fontSize: 22, color: "#fff" },
-  headerText: { flex: 1, alignItems: "flex-end" },
-  greetText: { fontSize: 13, color: "rgba(255,255,255,0.7)" },
-  nameText: { fontSize: 20, color: "#fff" },
-  subtitleRow: { alignItems: "flex-end" },
-  subtitleBadge: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  subtitleText: { fontSize: 13, color: "#fff" },
-  list: { paddingHorizontal: 16, paddingTop: 8 },
-  listHeader: { fontSize: 20, textAlign: "right", marginTop: 16, marginBottom: 12 },
-  row: { gap: 12, justifyContent: "space-between" },
-  specCard: { width: "100%", borderRadius: 20, padding: 18, marginBottom: 12, minHeight: 130, justifyContent: "space-between" },
-  specIconBg: { width: 46, height: 46, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.25)", justifyContent: "center", alignItems: "center" },
-  specName: { fontSize: 15, color: "#fff", textAlign: "right", lineHeight: 22 },
-  specArrow: { alignSelf: "flex-end" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 16, padding: 24 },
-  errorCard: { padding: 24, borderRadius: 20, alignItems: "center", gap: 14, width: "100%" },
-  errorTitle: { fontSize: 18 },
+  header: { borderBottomWidth: 1 },
+  banner: { paddingHorizontal: 16, paddingVertical: 8 },
+  bannerContent: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 },
+  bannerText: { color: "#fff", fontSize: 12, flex: 1 },
+  bannerLinks: { flexDirection: "row-reverse", gap: 6 },
+  bannerPill: { flexDirection: "row-reverse", alignItems: "center", gap: 4, backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
+  bannerPillText: { color: "#fff", fontSize: 11 },
+  navRow: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, height: 60 },
+  logoRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  logoIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  logoTitle: { fontSize: 18, lineHeight: 22 },
+  logoSub: { fontSize: 10 },
+  navRight: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  navPill: { flexDirection: "row-reverse", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  navPillText: { fontSize: 12 },
+  userAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, justifyContent: "center", alignItems: "center" },
+  userInitial: { fontSize: 14 },
+  listContent: { paddingHorizontal: 16, paddingTop: 8 },
+  pageHeader: { alignItems: "center", paddingVertical: 24, gap: 8 },
+  pageTitle: { fontSize: 28, textAlign: "center" },
+  pageSub: { fontSize: 14, textAlign: "center", lineHeight: 22, maxWidth: 280 },
+  specRow: { gap: 12, marginBottom: 12 },
+  specCard: { flex: 1, borderWidth: 2, borderRadius: 24, padding: 20, minHeight: 160, justifyContent: "space-between", overflow: "hidden" },
+  specDecor: { position: "absolute", top: 0, right: 0, width: 72, height: 72, borderBottomLeftRadius: 72 },
+  specIconWrap: { width: 64, height: 64, borderRadius: 20, justifyContent: "center", alignItems: "center", marginBottom: 8 },
+  specName: { fontSize: 16, textAlign: "right", lineHeight: 24, flex: 1 },
+  specFooter: { flexDirection: "row-reverse", alignItems: "center", gap: 3, marginTop: 12 },
+  specLink: { fontSize: 11 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14 },
+  spinnerWrap: {},
+  errText: { fontSize: 15 },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  emptyWrap: { paddingVertical: 60, alignItems: "center", borderWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(0,0,0,0.1)", borderRadius: 20, marginTop: 8 },
 });

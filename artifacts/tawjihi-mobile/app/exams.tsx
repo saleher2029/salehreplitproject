@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -52,52 +51,50 @@ export default function ExamsScreen() {
     setRefreshing(false);
   }, [refetch]);
 
-  const renderItem = ({ item, index }: { item: Exam; index: number }) => {
+  const renderItem = ({ item }: { item: Exam }) => {
     const count = item.questionLimit && item.questionLimit < item.questionCount ? item.questionLimit : item.questionCount;
     return (
       <Pressable
-        style={({ pressed }) => [styles.card, { backgroundColor: C.card, opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
+        style={({ pressed }) => [
+          styles.card,
+          { backgroundColor: C.card, borderColor: C.border, opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
+        ]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           router.push({ pathname: "/exam/[id]", params: { id: item.id } });
         }}
       >
-        {/* Left accent */}
-        <LinearGradient
-          colors={index % 2 === 0 ? ["#6C63FF", "#B15EFF"] : ["#FF6B6B", "#FF8E53"]}
-          style={styles.cardAccent}
-          start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        />
+        {/* Trophy icon */}
+        <View style={[styles.examIcon, { backgroundColor: C.primary + "12" }]}>
+          <Feather name="file-text" size={22} color={C.primary} />
+        </View>
 
-        <View style={styles.cardContent}>
+        <View style={styles.examBody}>
           <Text style={[styles.examTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]} numberOfLines={2}>
             {item.title}
           </Text>
-          <View style={styles.metaRow}>
-            <View style={[styles.badge, { backgroundColor: C.primary + "18" }]}>
+          <View style={styles.badgeRow}>
+            <View style={[styles.badge, { backgroundColor: C.primary + "12" }]}>
               <Feather name="help-circle" size={12} color={C.primary} />
-              <Text style={[styles.badgeText, { color: C.primary, fontFamily: "Tajawal_500Medium" }]}>{count} سؤال</Text>
+              <Text style={[styles.badgeText, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>{count} سؤال</Text>
             </View>
             {!!item.timeLimit && (
-              <View style={[styles.badge, { backgroundColor: C.warning + "18" }]}>
-                <Feather name="clock" size={12} color={C.warning} />
-                <Text style={[styles.badgeText, { color: C.warning, fontFamily: "Tajawal_500Medium" }]}>{item.timeLimit} دقيقة</Text>
+              <View style={[styles.badge, { backgroundColor: C.secondary + "18" }]}>
+                <Feather name="clock" size={12} color={C.secondary} />
+                <Text style={[styles.badgeText, { color: C.secondary, fontFamily: "Tajawal_700Bold" }]}>{item.timeLimit} دقيقة</Text>
               </View>
             )}
           </View>
         </View>
 
         <Pressable
+          style={[styles.startBtn, { backgroundColor: C.primary }]}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             router.push({ pathname: "/exam/[id]", params: { id: item.id } });
           }}
-          style={({ pressed }) => [{ opacity: pressed ? 0.8 : 1 }]}
         >
-          <LinearGradient colors={["#6C63FF", "#B15EFF"]} style={styles.startBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-            <Text style={[styles.startText, { fontFamily: "Tajawal_700Bold" }]}>ابدأ</Text>
-            <Feather name="arrow-left" size={14} color="#fff" />
-          </LinearGradient>
+          <Text style={[styles.startText, { fontFamily: "Tajawal_700Bold" }]}>ابدأ</Text>
         </Pressable>
       </Pressable>
     );
@@ -105,28 +102,29 @@ export default function ExamsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
-      <LinearGradient
-        colors={isDark ? ["#130F3A", "#07061A"] : ["#6C63FF", "#B15EFF"]}
-        style={[styles.header, { paddingTop: topPad + 12 }]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      >
-        <Pressable onPress={() => router.back()}>
-          <View style={styles.backCircle}>
-            <Feather name="arrow-right" size={20} color="#fff" />
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: C.card, borderBottomColor: C.border }]}>
+        <View style={styles.headerRow}>
+          <Pressable onPress={() => router.back()} style={[styles.backBtn, { borderColor: C.border }]}>
+            <Feather name="arrow-right" size={18} color={C.primary} />
+            <Text style={[styles.backText, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>العودة للوحدات</Text>
+          </Pressable>
+          <View style={styles.headerText}>
+            <Text style={[styles.headerTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>الامتحانات</Text>
+            {subjectName ? (
+              <Text style={[styles.headerSub, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>{name} • {subjectName}</Text>
+            ) : (
+              <Text style={[styles.headerSub, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>{name}</Text>
+            )}
           </View>
-        </Pressable>
-        <View style={styles.headerText}>
-          {subjectName ? <Text style={[styles.headerSub, { fontFamily: "Tajawal_400Regular" }]}>{subjectName}</Text> : null}
-          <Text style={[styles.headerTitle, { fontFamily: "Tajawal_700Bold" }]} numberOfLines={1}>{name}</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {isLoading && <View style={styles.center}><ActivityIndicator size="large" color={C.primary} /></View>}
 
       {!!error && (
         <View style={styles.center}>
           <Feather name="wifi-off" size={40} color={C.error} />
-          <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_400Regular", fontSize: 15 }]}>تعذّر التحميل</Text>
           <Pressable onPress={() => refetch()} style={[styles.retryBtn, { backgroundColor: C.primary }]}>
             <Text style={[{ color: "#fff", fontFamily: "Tajawal_700Bold", fontSize: 14 }]}>إعادة المحاولة</Text>
           </Pressable>
@@ -135,11 +133,11 @@ export default function ExamsScreen() {
 
       {!isLoading && !error && (!exams || exams.length === 0) && (
         <View style={styles.center}>
-          <LinearGradient colors={["#6C63FF", "#B15EFF"]} style={styles.emptyIcon}>
-            <Feather name="file-text" size={30} color="#fff" />
-          </LinearGradient>
-          <Text style={[{ color: C.text, fontFamily: "Tajawal_700Bold", fontSize: 17 }]}>لا توجد امتحانات</Text>
-          <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_400Regular", fontSize: 14 }]}>لم تُضَف امتحانات لهذه الوحدة بعد</Text>
+          <View style={[styles.emptyBox, { borderColor: C.border }]}>
+            <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_700Bold", fontSize: 15, textAlign: "center" }]}>
+              لا توجد امتحانات في هذه الوحدة
+            </Text>
+          </View>
         </View>
       )}
 
@@ -159,22 +157,24 @@ export default function ExamsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row-reverse", alignItems: "center", paddingHorizontal: 16, paddingBottom: 20, gap: 12 },
-  backCircle: { width: 40, height: 40, borderRadius: 13, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center" },
-  headerText: { flex: 1, alignItems: "flex-end" },
-  headerSub: { fontSize: 12, color: "rgba(255,255,255,0.65)" },
-  headerTitle: { fontSize: 20, color: "#fff" },
-  list: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 40 },
-  card: { flexDirection: "row-reverse", alignItems: "center", borderRadius: 16, marginBottom: 10, overflow: "hidden", gap: 0 },
-  cardAccent: { width: 5, alignSelf: "stretch" },
-  cardContent: { flex: 1, padding: 14, gap: 8, alignItems: "flex-end" },
-  examTitle: { fontSize: 15, textAlign: "right" },
-  metaRow: { flexDirection: "row-reverse", gap: 8, flexWrap: "wrap" },
-  badge: { flexDirection: "row-reverse", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeText: { fontSize: 12 },
-  startBtn: { paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row-reverse", alignItems: "center", gap: 5, margin: 10, borderRadius: 12 },
-  startText: { color: "#fff", fontSize: 13 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14 },
-  emptyIcon: { width: 72, height: 72, borderRadius: 22, justifyContent: "center", alignItems: "center" },
+  header: { paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, gap: 12 },
+  headerRow: { flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
+  headerText: { alignItems: "flex-end", flex: 1 },
+  headerTitle: { fontSize: 22 },
+  headerSub: { fontSize: 13, textAlign: "right" },
+  backBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, flexShrink: 0 },
+  backText: { fontSize: 13 },
+  list: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 40 },
+  card: { flexDirection: "row-reverse", alignItems: "center", padding: 14, borderRadius: 16, borderWidth: 1, marginBottom: 10, gap: 12 },
+  examIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: "center", alignItems: "center", flexShrink: 0 },
+  examBody: { flex: 1, gap: 8, alignItems: "flex-end" },
+  examTitle: { fontSize: 15, textAlign: "right", lineHeight: 22 },
+  badgeRow: { flexDirection: "row-reverse", gap: 6, flexWrap: "wrap" },
+  badge: { flexDirection: "row-reverse", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  badgeText: { fontSize: 11 },
+  startBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, flexShrink: 0 },
+  startText: { color: "#fff", fontSize: 14 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 14, padding: 24 },
   retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
+  emptyBox: { padding: 32, borderRadius: 20, borderWidth: 1.5, borderStyle: "dashed", alignItems: "center" },
 });

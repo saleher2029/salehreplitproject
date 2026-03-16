@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -46,11 +45,6 @@ export default function ProfileScreen() {
     queryFn: () => apiRequest<SiteSettings>("/api/settings"),
   });
 
-  const handleLogout = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setShowLogoutModal(true);
-  };
-
   const confirmLogout = async () => {
     setLoggingOut(true);
     await logout();
@@ -65,71 +59,66 @@ export default function ProfileScreen() {
     if (role === "student") return "طالب مشترك";
     return "ضيف";
   };
-
-  const roleGradient: [string, string] = user?.role === "admin"
-    ? ["#F59E0B", "#EF4444"]
-    : user?.role === "student"
-    ? ["#6C63FF", "#B15EFF"]
-    : ["#6B7280", "#9CA3AF"];
+  const roleColor = (role: string) => {
+    if (role === "admin") return { bg: C.error + "1A", text: C.error };
+    if (role === "student") return { bg: C.primary + "1A", text: C.primary };
+    return { bg: C.muted, text: C.textMuted };
+  };
 
   return (
     <View style={[styles.wrap, { backgroundColor: C.background }]}>
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: bottomPad + 100 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Hero Header */}
-        <LinearGradient
-          colors={isDark ? ["#130F3A", "#07061A"] : ["#6C63FF", "#B15EFF"]}
-          style={[styles.hero, { paddingTop: topPad + 24 }]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.avatarContainer}>
-            <LinearGradient colors={roleGradient} style={styles.avatarGrad}>
-              <Text style={[styles.avatarLetter, { fontFamily: "Tajawal_700Bold" }]}>
+      <ScrollView contentContainerStyle={{ paddingBottom: bottomPad + 100 }} showsVerticalScrollIndicator={false}>
+        {/* ── Header ── */}
+        <View style={[styles.header, { paddingTop: topPad + 20, backgroundColor: C.card, borderBottomColor: C.border }]}>
+          {/* User Avatar + Info */}
+          <View style={styles.userRow}>
+            <View style={[styles.avatar, { backgroundColor: C.primary + "18", borderColor: C.primary + "30" }]}>
+              <Text style={[styles.avatarLetter, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>
                 {(user?.name || "T")[0].toUpperCase()}
               </Text>
-            </LinearGradient>
-            <View style={[styles.avatarRing, { borderColor: "rgba(255,255,255,0.3)" }]} />
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={[styles.userName, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>{user?.name || "مستخدم"}</Text>
+              {user?.email ? (
+                <Text style={[styles.userEmail, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>{user.email}</Text>
+              ) : null}
+              <View style={[styles.roleBadge, { backgroundColor: roleColor(user?.role || "guest").bg }]}>
+                <Text style={[styles.roleText, { color: roleColor(user?.role || "guest").text, fontFamily: "Tajawal_700Bold" }]}>
+                  {roleLabel(user?.role || "guest")}
+                </Text>
+              </View>
+            </View>
           </View>
+        </View>
 
-          <Text style={[styles.heroName, { fontFamily: "Tajawal_700Bold" }]}>{user?.name || "مستخدم"}</Text>
-          {user?.email ? (
-            <Text style={[styles.heroEmail, { fontFamily: "Tajawal_400Regular" }]}>{user.email}</Text>
-          ) : null}
-
-          <LinearGradient colors={roleGradient} style={styles.rolePill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-            <Text style={[styles.roleText, { fontFamily: "Tajawal_700Bold" }]}>{roleLabel(user?.role || "guest")}</Text>
-          </LinearGradient>
-        </LinearGradient>
-
-        {/* Subscription Info */}
+        {/* ── Subscription Info ── */}
         {settings?.subscriptionInfo ? (
           <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
-            <SectionLabel label="معلومات الاشتراك" color={C.textMuted} />
+            <Text style={[styles.sectionLabel, { color: C.textMuted, fontFamily: "Tajawal_500Medium" }]}>معلومات الاشتراك</Text>
             <View style={[styles.infoCard, { backgroundColor: C.card, borderColor: C.primary + "30" }]}>
-              <LinearGradient colors={[C.primary + "22", C.primary + "08"]} style={styles.infoGrad}>
-                <Feather name="info" size={18} color={C.primary} />
-                <Text style={[styles.infoText, { color: C.text, fontFamily: "Tajawal_400Regular" }]}>
-                  {settings.subscriptionInfo}
-                </Text>
-              </LinearGradient>
+              <View style={[styles.infoIconWrap, { backgroundColor: C.primary + "18" }]}>
+                <Feather name="info" size={16} color={C.primary} />
+              </View>
+              <Text style={[styles.infoText, { color: C.text, fontFamily: "Tajawal_400Regular" }]}>
+                {settings.subscriptionInfo}
+              </Text>
             </View>
           </View>
         ) : null}
 
-        {/* Contact */}
+        {/* ── Contact ── */}
         {(settings?.whatsappNumber || settings?.telegramUsername) ? (
           <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
-            <SectionLabel label="تواصل معنا" color={C.textMuted} />
+            <Text style={[styles.sectionLabel, { color: C.textMuted, fontFamily: "Tajawal_500Medium" }]}>تواصل معنا</Text>
             <View style={styles.menuGroup}>
               {settings?.whatsappNumber ? (
                 <MenuItem
                   icon="message-circle"
                   label="واتساب"
                   sublabel={settings.whatsappNumber}
-                  gradColors={["#25D366", "#128C7E"]}
-                  onPress={() => Linking.openURL(`https://wa.me/${settings!.whatsappNumber}`)}
+                  iconBg="#25D36618"
+                  iconColor="#25D366"
+                  onPress={() => Linking.openURL(`https://wa.me/${settings!.whatsappNumber.replace(/\D/g, "")}`)}
                   C={C}
                 />
               ) : null}
@@ -138,7 +127,8 @@ export default function ProfileScreen() {
                   icon="send"
                   label="تيليغرام"
                   sublabel={"@" + settings.telegramUsername}
-                  gradColors={["#229ED9", "#007AB8"]}
+                  iconBg="#229ED918"
+                  iconColor="#229ED9"
                   onPress={() => Linking.openURL(`https://t.me/${settings!.telegramUsername}`)}
                   C={C}
                 />
@@ -147,31 +137,47 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {/* Account */}
+        {/* ── Account ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
-          <SectionLabel label="الحساب" color={C.textMuted} />
+          <Text style={[styles.sectionLabel, { color: C.textMuted, fontFamily: "Tajawal_500Medium" }]}>الحساب</Text>
           <View style={styles.menuGroup}>
             <MenuItem
-              icon="clock"
-              label="سجل الامتحانات"
+              icon="award"
+              label="امتحاناتي"
               sublabel="عرض جميع نتائجك"
-              gradColors={["#6C63FF", "#B15EFF"]}
+              iconBg={C.primary + "18"}
+              iconColor={C.primary}
               onPress={() => router.push("/(main)/history")}
               C={C}
             />
+            {(user?.role === "admin" || user?.role === "supervisor") && (
+              <MenuItem
+                icon="settings"
+                label="لوحة التحكم"
+                sublabel="إدارة المحتوى"
+                iconBg={C.secondary + "18"}
+                iconColor={C.secondary}
+                onPress={() => {}}
+                C={C}
+              />
+            )}
             <MenuItem
               icon="log-out"
               label="تسجيل الخروج"
               sublabel="مغادرة الحساب"
-              gradColors={["#FF4757", "#FF6B81"]}
-              onPress={handleLogout}
+              iconBg={C.error + "12"}
+              iconColor={C.error}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setShowLogoutModal(true);
+              }}
               C={C}
               destructive
             />
           </View>
         </View>
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: C.textMuted, fontFamily: "Tajawal_400Regular" }]}>
             Tawjihi-Exams v1.0 • By S&S
@@ -179,36 +185,32 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
 
-      {/* Logout Confirmation Modal */}
+      {/* ── Logout Modal ── */}
       <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setShowLogoutModal(false)}>
-          <Pressable style={[styles.modalCard, { backgroundColor: isDark ? "#161830" : "#FFFFFF" }]} onPress={() => {}}>
-            <View style={[styles.modalIconWrap, { backgroundColor: "#FF475720" }]}>
-              <Feather name="log-out" size={28} color="#FF4757" />
+        <Pressable style={styles.overlay} onPress={() => setShowLogoutModal(false)}>
+          <Pressable style={[styles.modal, { backgroundColor: C.card, borderColor: C.border }]} onPress={() => {}}>
+            <View style={[styles.modalIcon, { backgroundColor: C.error + "12" }]}>
+              <Feather name="log-out" size={26} color={C.error} />
             </View>
-            <Text style={[styles.modalTitle, { color: isDark ? "#F0EEFF" : "#1A1033", fontFamily: "Tajawal_700Bold" }]}>
-              تسجيل الخروج
-            </Text>
-            <Text style={[styles.modalBody, { color: isDark ? "#8C89AB" : "#5A5375", fontFamily: "Tajawal_400Regular" }]}>
-              هل تريد الخروج من حسابك؟
+            <Text style={[styles.modalTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>تسجيل الخروج</Text>
+            <Text style={[styles.modalBody, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>
+              هل تريد مغادرة حسابك؟
             </Text>
             <View style={styles.modalBtns}>
               <Pressable
-                style={[styles.modalCancelBtn, { borderColor: isDark ? "rgba(255,255,255,0.12)" : "#E5E1F8" }]}
+                style={({ pressed }) => [styles.cancelBtn, { borderColor: C.border, backgroundColor: pressed ? C.muted : "transparent" }]}
                 onPress={() => setShowLogoutModal(false)}
               >
-                <Text style={[styles.modalCancelText, { color: isDark ? "#8C89AB" : "#5A5375", fontFamily: "Tajawal_700Bold" }]}>
-                  إلغاء
-                </Text>
+                <Text style={[styles.cancelText, { color: C.textSecondary, fontFamily: "Tajawal_700Bold" }]}>إلغاء</Text>
               </Pressable>
-              <Pressable style={styles.modalConfirmBtn} onPress={confirmLogout} disabled={loggingOut}>
-                <LinearGradient colors={["#FF4757", "#FF6B81"]} style={styles.modalConfirmGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                  {loggingOut ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={[styles.modalConfirmText, { fontFamily: "Tajawal_700Bold" }]}>خروج</Text>
-                  )}
-                </LinearGradient>
+              <Pressable
+                style={({ pressed }) => [styles.confirmBtn, { backgroundColor: C.error, opacity: pressed ? 0.85 : 1 }]}
+                onPress={confirmLogout}
+                disabled={loggingOut}
+              >
+                {loggingOut
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={[styles.confirmText, { fontFamily: "Tajawal_700Bold" }]}>خروج</Text>}
               </Pressable>
             </View>
           </Pressable>
@@ -218,78 +220,64 @@ export default function ProfileScreen() {
   );
 }
 
-function SectionLabel({ label, color }: { label: string; color: string }) {
-  return (
-    <Text style={[styles.sectionLabel, { color, fontFamily: "Tajawal_500Medium" }]}>{label}</Text>
-  );
-}
-
 function MenuItem({
-  icon, label, sublabel, gradColors, onPress, C, destructive = false,
+  icon, label, sublabel, iconBg, iconColor, onPress, C, destructive = false,
 }: {
   icon: keyof typeof Feather.glyphMap;
-  label: string;
-  sublabel?: string;
-  gradColors: [string, string];
+  label: string; sublabel?: string;
+  iconBg: string; iconColor: string;
   onPress: () => void;
   C: typeof Colors.light;
   destructive?: boolean;
 }) {
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.menuItem,
-        { backgroundColor: C.card, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-      ]}
+      style={({ pressed }) => [styles.menuItem, { backgroundColor: C.card, borderColor: C.border, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }]}
       onPress={onPress}
     >
-      <View style={styles.menuLeft}>
-        {!destructive && <Feather name="chevron-left" size={16} color={C.textMuted} />}
+      <View style={[styles.menuIcon, { backgroundColor: iconBg }]}>
+        <Feather name={icon} size={18} color={iconColor} />
       </View>
       <View style={styles.menuText}>
-        <Text style={[styles.menuLabel, { color: destructive ? "#FF4757" : C.text, fontFamily: "Tajawal_700Bold" }]}>{label}</Text>
-        {sublabel ? <Text style={[styles.menuSub, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>{sublabel}</Text> : null}
+        <Text style={[styles.menuLabel, { color: destructive ? C.error : C.text, fontFamily: "Tajawal_700Bold" }]}>{label}</Text>
+        {sublabel ? <Text style={[styles.menuSub, { color: C.textMuted, fontFamily: "Tajawal_400Regular" }]}>{sublabel}</Text> : null}
       </View>
-      <LinearGradient colors={gradColors} style={styles.menuIcon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        <Feather name={icon} size={17} color="#fff" />
-      </LinearGradient>
+      {!destructive && <Feather name="chevron-left" size={16} color={C.textMuted} />}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
-  hero: { alignItems: "center", paddingHorizontal: 20, paddingBottom: 32, gap: 8 },
-  avatarContainer: { position: "relative", marginBottom: 6 },
-  avatarGrad: { width: 86, height: 86, borderRadius: 26, justifyContent: "center", alignItems: "center" },
-  avatarRing: { position: "absolute", inset: -4, borderRadius: 30, borderWidth: 2, pointerEvents: "none" },
-  avatarLetter: { fontSize: 36, color: "#fff" },
-  heroName: { fontSize: 24, color: "#fff", textAlign: "center" },
-  heroEmail: { fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center" },
-  rolePill: { paddingHorizontal: 16, paddingVertical: 5, borderRadius: 20 },
-  roleText: { color: "#fff", fontSize: 13 },
-  sectionLabel: { fontSize: 12, textAlign: "right", marginBottom: 10, marginRight: 4, textTransform: "uppercase", letterSpacing: 0.5 },
-  menuGroup: { gap: 10 },
-  menuItem: { flexDirection: "row-reverse", alignItems: "center", padding: 14, borderRadius: 16, gap: 12 },
-  menuIcon: { width: 42, height: 42, borderRadius: 13, justifyContent: "center", alignItems: "center", flexShrink: 0 },
+  header: { paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1 },
+  userRow: { flexDirection: "row-reverse", alignItems: "center", gap: 14 },
+  avatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, justifyContent: "center", alignItems: "center" },
+  avatarLetter: { fontSize: 28 },
+  userInfo: { flex: 1, alignItems: "flex-end", gap: 4 },
+  userName: { fontSize: 20 },
+  userEmail: { fontSize: 13 },
+  roleBadge: { paddingHorizontal: 12, paddingVertical: 3, borderRadius: 20, alignSelf: "flex-end" },
+  roleText: { fontSize: 12 },
+  sectionLabel: { fontSize: 12, textAlign: "right", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 },
+  menuGroup: { gap: 8 },
+  menuItem: { flexDirection: "row-reverse", alignItems: "center", padding: 14, borderRadius: 14, borderWidth: 1, gap: 12 },
+  menuIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center", flexShrink: 0 },
   menuText: { flex: 1, alignItems: "flex-end", gap: 1 },
   menuLabel: { fontSize: 15 },
   menuSub: { fontSize: 12 },
-  menuLeft: { width: 24, alignItems: "center" },
-  infoCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  infoGrad: { flexDirection: "row-reverse", gap: 12, padding: 14, alignItems: "flex-start" },
-  infoText: { flex: 1, fontSize: 14, lineHeight: 22, textAlign: "right" },
+  infoCard: { flexDirection: "row-reverse", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
+  infoIconWrap: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center", flexShrink: 0 },
+  infoText: { flex: 1, fontSize: 13, textAlign: "right", lineHeight: 22 },
   footer: { alignItems: "center", paddingTop: 40 },
   footerText: { fontSize: 12 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 24 },
-  modalCard: { width: "100%", maxWidth: 360, borderRadius: 24, padding: 28, alignItems: "center", gap: 10 },
-  modalIconWrap: { width: 64, height: 64, borderRadius: 20, justifyContent: "center", alignItems: "center", marginBottom: 4 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", alignItems: "center", padding: 24 },
+  modal: { width: "100%", maxWidth: 360, borderRadius: 20, borderWidth: 1, padding: 24, alignItems: "center", gap: 10 },
+  modalIcon: { width: 60, height: 60, borderRadius: 18, justifyContent: "center", alignItems: "center", marginBottom: 4 },
   modalTitle: { fontSize: 20, textAlign: "center" },
   modalBody: { fontSize: 14, textAlign: "center", lineHeight: 22 },
-  modalBtns: { flexDirection: "row-reverse", gap: 12, marginTop: 6, width: "100%" },
-  modalCancelBtn: { flex: 1, height: 50, borderRadius: 14, justifyContent: "center", alignItems: "center", borderWidth: 1.5 },
-  modalCancelText: { fontSize: 15 },
-  modalConfirmBtn: { flex: 1, borderRadius: 14, overflow: "hidden" },
-  modalConfirmGrad: { height: 50, justifyContent: "center", alignItems: "center" },
-  modalConfirmText: { color: "#fff", fontSize: 15 },
+  modalBtns: { flexDirection: "row-reverse", gap: 10, marginTop: 8, width: "100%" },
+  cancelBtn: { flex: 1, height: 48, borderRadius: 12, justifyContent: "center", alignItems: "center", borderWidth: 1.5 },
+  cancelText: { fontSize: 14 },
+  confirmBtn: { flex: 1, height: 48, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  confirmText: { color: "#fff", fontSize: 14 },
 });
