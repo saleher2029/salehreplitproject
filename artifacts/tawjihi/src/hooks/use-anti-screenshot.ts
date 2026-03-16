@@ -2,23 +2,26 @@ import { useEffect, useRef } from "react";
 
 /**
  * Anti-screenshot / anti-screen-recording hook.
- * Only apply this on the exam page — not for admin users.
+ * Only apply for students & guests — never for admins/supervisors.
  *
- * Techniques used:
- * 1. Blur overlay when page loses focus (visibilitychange / blur)
- * 2. Disable right-click context menu
- * 3. Block common keyboard shortcuts (PrtScn, Ctrl+Shift+S, etc.)
- * 4. user-select: none on body during exam
- * 5. Print media query (blank page when printing)
- * 6. Screen sharing detection via mediaDevices
+ * Techniques:
+ * 1.  Floating watermark with user identity (traceable screenshots)
+ * 2.  Blank-screen flash on PrintScreen key (content hidden before OS captures)
+ * 3.  Blur overlay when window loses focus / tab switches
+ * 4.  Block getDisplayMedia entirely (browser screen-share rejected)
+ * 5.  Disable right-click, text selection, copy, drag
+ * 6.  Block common keyboard shortcuts (PrtScn, Ctrl+Shift+S, etc.)
+ * 7.  Print-block CSS
  */
-export function useAntiScreenshot(enabled: boolean) {
+export function useAntiScreenshot(enabled: boolean, watermark?: string) {
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const wmRef = useRef<HTMLDivElement | null>(null);
+  const origGetDisplayMedia = useRef<any>(null);
 
   useEffect(() => {
     if (!enabled) return;
 
-    // ── 1. Inject print-block style ────────────────────────────────────────
+    // ── 1. Print-block + user-select CSS ────────────────────────────────────
     const printStyle = document.createElement("style");
     printStyle.id = "__exam_print_block";
     printStyle.textContent = `
@@ -33,7 +36,7 @@ export function useAntiScreenshot(enabled: boolean) {
           font-family: sans-serif;
         }
       }
-      body.__exam_active {
+      body.__exam_active * {
         -webkit-user-select: none !important;
         -moz-user-select: none !important;
         user-select: none !important;
@@ -42,7 +45,34 @@ export function useAntiScreenshot(enabled: boolean) {
     document.head.appendChild(printStyle);
     document.body.classList.add("__exam_active");
 
-    // ── 2. Blur overlay element ────────────────────────────────────────────
+    // ── 2. Watermark overlay ─────────────────────────────────────────────────
+    const wm = document.createElement("div");
+    wm.id = "__exam_watermark";
+    const wmText = watermark || "امتحانات توجيهي";
+    const tile = `<span style="display:inline-block;margin:28px 40px;white-space:nowrap">${wmText}</span>`;
+    wm.innerHTML = tile.repeat(120);
+    Object.assign(wm.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "99990",
+      pointerEvents: "none",
+      overflow: "hidden",
+      display: "flex",
+      flexWrap: "wrap",
+      alignContent: "flex-start",
+      opacity: "0.055",
+      color: "#000",
+      fontSize: "13px",
+      fontFamily: "sans-serif",
+      fontWeight: "600",
+      transform: "rotate(-30deg) scale(1.4)",
+      transformOrigin: "center center",
+      userSelect: "none",
+    });
+    document.body.appendChild(wm);
+    wmRef.current = wm;
+
+    // ── 3. Black blur overlay (focus-loss / screenshot) ──────────────────────
     const overlay = document.createElement("div");
     overlay.id = "__exam_overlay";
     Object.assign(overlay.style, {
@@ -61,11 +91,12 @@ export function useAntiScreenshot(enabled: boolean) {
       padding: "32px",
     });
     overlay.innerHTML = `
-      <div style="font-size:48px">🔒</div>
-      <div style="font-size:22px;font-weight:bold">الاختبار متوقف مؤقتاً</div>
-      <div style="font-size:14px;opacity:0.75;max-width:320px;line-height:1.6">
+      <div style="font-size:52px">🔒</div>
+      <div style="font-size:24px;font-weight:bold">الاختبار محمي</div>
+      <div style="font-size:14px;opacity:0.75;max-width:340px;line-height:1.8">
         عُدْ إلى هذه النافذة لمتابعة الاختبار.<br/>
-        التقاط الشاشة أثناء الاختبار غير مسموح.
+        تصوير الشاشة أو التقاطها غير مسموح.<br/>
+        <span style="font-size:12px;opacity:0.6">${wmText}</span>
       </div>
     `;
     document.body.appendChild(overlay);
@@ -74,101 +105,104 @@ export function useAntiScreenshot(enabled: boolean) {
     const showOverlay = () => { overlay.style.display = "flex"; };
     const hideOverlay = () => { overlay.style.display = "none"; };
 
-    // ── 3. Visibility change ───────────────────────────────────────────────
-    const onVisibility = () => {
-      if (document.hidden) showOverlay();
-      else hideOverlay();
+    // Helper: flash screen black for ~300ms to defeat OS screenshot timing
+    const flashBlack = () => {
+      document.body.style.opacity = "0";
+      showOverlay();
+      setTimeout(() => {
+        document.body.style.opacity = "1";
+        setTimeout(hideOverlay, 1800);
+      }, 300);
     };
-    document.addEventListener("visibilitychange", onVisibility);
 
-    // ── 4. Window blur/focus ───────────────────────────────────────────────
-    const onBlur = () => showOverlay();
-    const onFocus = () => {
-      setTimeout(hideOverlay, 300); // small delay to prevent flicker
-    };
-    window.addEventListener("blur", onBlur);
+    // ── 4. Visibility / focus events ─────────────────────────────────────────
+    const onVisibility = () => { document.hidden ? showOverlay() : hideOverlay(); };
+    const onBlur  = () => showOverlay();
+    const onFocus = () => setTimeout(hideOverlay, 300);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur",  onBlur);
     window.addEventListener("focus", onFocus);
 
-    // ── 5. Disable right-click ────────────────────────────────────────────
-    const onContextMenu = (e: MouseEvent) => e.preventDefault();
-    document.addEventListener("contextmenu", onContextMenu);
+    // ── 5. Disable right-click, copy, drag ──────────────────────────────────
+    const noCtxMenu   = (e: MouseEvent)    => e.preventDefault();
+    const noCopy      = (e: ClipboardEvent) => e.preventDefault();
+    const noDrag      = (e: DragEvent)     => e.preventDefault();
+    const noSelect    = (e: Event)         => { (e as any).returnValue = false; };
+    document.addEventListener("contextmenu",    noCtxMenu,  true);
+    document.addEventListener("copy",           noCopy,     true);
+    document.addEventListener("cut",            noCopy,     true);
+    document.addEventListener("dragstart",      noDrag,     true);
+    document.addEventListener("selectstart",    noSelect,   true);
 
-    // ── 6. Block keyboard screenshot shortcuts ────────────────────────────
+    // ── 6. Block keyboard shortcuts ──────────────────────────────────────────
     const onKeyDown = (e: KeyboardEvent) => {
-      const { key, code, ctrlKey, metaKey, shiftKey, altKey } = e;
+      const { key, code, ctrlKey, metaKey, shiftKey } = e;
 
-      // PrintScreen
+      // PrintScreen — flash black before OS captures
       if (code === "PrintScreen" || key === "PrintScreen") {
         e.preventDefault();
-        showOverlay();
-        setTimeout(hideOverlay, 2000);
+        flashBlack();
         return;
       }
 
-      // Windows Snipping Tool: Win+Shift+S (we can't catch Win key, but Shift+S combos)
-      // Ctrl+Shift+S (some OS)
+      // Win+Shift+S / Ctrl+Shift+S (snipping tools)
       if ((ctrlKey || metaKey) && shiftKey && (key === "s" || key === "S")) {
-        e.preventDefault();
-        return;
+        e.preventDefault(); flashBlack(); return;
       }
 
-      // macOS: Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5, Cmd+Shift+6
-      if (metaKey && shiftKey && ["3", "4", "5", "6"].includes(key)) {
-        e.preventDefault();
-        return;
+      // macOS: Cmd+Shift+3/4/5/6
+      if (metaKey && shiftKey && ["3","4","5","6"].includes(key)) {
+        e.preventDefault(); flashBlack(); return;
       }
 
-      // Ctrl+C (copy)
-      if ((ctrlKey || metaKey) && key === "c") {
-        e.preventDefault();
-        return;
+      // Ctrl+C / Cmd+C
+      if ((ctrlKey || metaKey) && (key === "c" || key === "C") && !shiftKey) {
+        e.preventDefault(); return;
       }
 
-      // F12 DevTools
-      if (key === "F12") {
-        e.preventDefault();
-        return;
-      }
+      // F12 / DevTools
+      if (key === "F12") { e.preventDefault(); return; }
 
-      // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+U (DevTools / view source)
-      if ((ctrlKey || metaKey) && shiftKey && (key === "i" || key === "I" || key === "j" || key === "J")) {
-        e.preventDefault();
-        return;
-      }
+      // Ctrl+Shift+I / J / U
+      if ((ctrlKey || metaKey) && shiftKey &&
+          ["i","I","j","J"].includes(key)) { e.preventDefault(); return; }
       if ((ctrlKey || metaKey) && (key === "u" || key === "U") && !shiftKey) {
-        e.preventDefault();
-        return;
+        e.preventDefault(); return;
       }
     };
     document.addEventListener("keydown", onKeyDown, true);
 
-    // ── 7. Screen capture detection (getDisplayMedia) ─────────────────────
-    let captureCheckInterval: ReturnType<typeof setInterval> | null = null;
-    if (typeof navigator !== "undefined" && (navigator as any).mediaDevices) {
-      // Patch getDisplayMedia to show warning
-      const origGetDisplayMedia = (navigator.mediaDevices as any).getDisplayMedia?.bind(navigator.mediaDevices);
-      if (origGetDisplayMedia) {
-        (navigator.mediaDevices as any).getDisplayMedia = async (...args: any[]) => {
-          showOverlay();
-          setTimeout(hideOverlay, 3000);
-          // Still call the original — we can't fully block it, but we can warn
-          return origGetDisplayMedia(...args);
-        };
-      }
+    // ── 7. Block getDisplayMedia (browser screen-share) ──────────────────────
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getDisplayMedia) {
+      origGetDisplayMedia.current = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+      (navigator.mediaDevices as any).getDisplayMedia = async () => {
+        showOverlay();
+        throw new DOMException("Screen capture is not allowed during the exam.", "NotAllowedError");
+      };
     }
 
     return () => {
-      // Cleanup
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("blur",  onBlur);
       window.removeEventListener("focus", onFocus);
-      document.removeEventListener("contextmenu", onContextMenu);
-      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("contextmenu",    noCtxMenu,  true);
+      document.removeEventListener("copy",           noCopy,     true);
+      document.removeEventListener("cut",            noCopy,     true);
+      document.removeEventListener("dragstart",      noDrag,     true);
+      document.removeEventListener("selectstart",    noSelect,   true);
+      document.removeEventListener("keydown",        onKeyDown,  true);
       document.body.classList.remove("__exam_active");
-      document.head.removeChild(printStyle);
-      document.body.removeChild(overlay);
+      document.body.style.opacity = "1";
+      if (document.head.contains(printStyle)) document.head.removeChild(printStyle);
+      if (document.body.contains(overlay)) document.body.removeChild(overlay);
+      if (document.body.contains(wm)) document.body.removeChild(wm);
       overlayRef.current = null;
-      if (captureCheckInterval) clearInterval(captureCheckInterval);
+      wmRef.current = null;
+      // Restore original getDisplayMedia
+      if (origGetDisplayMedia.current && navigator.mediaDevices) {
+        (navigator.mediaDevices as any).getDisplayMedia = origGetDisplayMedia.current;
+        origGetDisplayMedia.current = null;
+      }
     };
-  }, [enabled]);
+  }, [enabled, watermark]);
 }
