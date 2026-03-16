@@ -2,15 +2,26 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetSettings } from "@workspace/api-client-react";
-import { MessageCircle, BookOpen, Settings } from "lucide-react";
+import { MessageCircle, BookOpen, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SettingsDrawer } from "@/components/settings-drawer";
 import { OnboardingModal } from "@/components/onboarding-modal";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { user, token } = useAuth();
+  const { user, token, clearAuth } = useAuth();
   const [, setLocation] = useLocation();
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${import.meta.env.BASE_URL}api/auth/logout`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+    } catch {}
+    clearAuth();
+    setLocation("/login");
+  };
 
   const { data: settings } = useGetSettings({
     request: { headers: token ? { Authorization: `Bearer ${token}` } : {} },
@@ -83,6 +94,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   {user.name}
                 </span>
                 <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </button>
+
+              {/* Logout button */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors text-sm font-bold"
+                title="تسجيل الخروج"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:block">خروج</span>
               </button>
             </div>
           )}
