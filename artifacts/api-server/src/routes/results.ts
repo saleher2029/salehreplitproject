@@ -148,7 +148,7 @@ const FeedbackBody = z.object({
 
 router.put("/results/:id/feedback", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
-  const resultId = parseInt(req.params.id);
+  const resultId = parseInt(req.params["id"] as string);
   if (isNaN(resultId)) { res.status(400).json({ error: "معرّف غير صالح" }); return; }
 
   const [result] = await db.select().from(examResultsTable).where(eq(examResultsTable.id, resultId));

@@ -99,6 +99,8 @@ export interface Exam {
   questionCount: number;
   /** @nullable */
   timeLimit?: number | null;
+  /** @nullable */
+  questionLimit?: number | null;
   createdAt: string;
 }
 
@@ -163,6 +165,8 @@ export interface ExamWithQuestions {
   questionCount: number;
   /** @nullable */
   timeLimit?: number | null;
+  /** @nullable */
+  questionLimit?: number | null;
   createdAt: string;
   questions: Question[];
 }
@@ -185,6 +189,8 @@ export interface Answer {
 export interface SubmitExamBody {
   examId: number;
   answers: Answer[];
+  /** @nullable */
+  bookmarkedQuestionIds?: number[] | null;
 }
 
 export interface ExamResult {
@@ -222,6 +228,14 @@ export interface ExamResultDetail {
   percentage: number;
   completedAt: string;
   answers: AnswerDetail[];
+  /** @nullable */
+  bookmarkedQuestions?: string | null;
+  /** @nullable */
+  unitId?: number | null;
+  /** @nullable */
+  subjectId?: number | null;
+  /** @nullable */
+  specializationId?: number | null;
 }
 
 export type UpdateUserBodyRole =
