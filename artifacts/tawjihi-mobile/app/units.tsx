@@ -35,6 +35,7 @@ export default function UnitsScreen() {
     queryKey: ["units", subjectId],
     queryFn: () => apiRequest<Unit[]>(`/api/units?subjectId=${subjectId}`),
     enabled: !!subjectId,
+    refetchInterval: 30_000,
   });
 
   const onRefresh = useCallback(async () => {

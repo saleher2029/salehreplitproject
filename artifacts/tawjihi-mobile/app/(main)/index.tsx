@@ -35,11 +35,13 @@ export default function HomeScreen() {
   const { data: specs, isLoading, error, refetch } = useQuery<Specialization[]>({
     queryKey: ["specializations"],
     queryFn: () => apiRequest<Specialization[]>("/api/specializations"),
+    refetchInterval: 30_000,
   });
 
   const { data: settings } = useQuery<SiteSettings>({
     queryKey: ["site-settings"],
     queryFn: () => apiRequest<SiteSettings>("/api/settings"),
+    refetchInterval: 30_000,
   });
 
   const onRefresh = useCallback(async () => {

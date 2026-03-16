@@ -41,6 +41,7 @@ export default function ExamsScreen() {
     queryKey: ["exams", unitId],
     queryFn: () => apiRequest<Exam[]>(`/api/exams?unitId=${unitId}`),
     enabled: !!unitId,
+    refetchInterval: 30_000,
   });
 
   const onRefresh = useCallback(async () => {

@@ -50,6 +50,7 @@ export default function HistoryScreen() {
     queryKey: ["results", token],
     queryFn: () => apiRequest<ExamResult[]>("/api/results", { token }),
     enabled: !!token,
+    refetchInterval: 30_000,
   });
 
   const onRefresh = useCallback(async () => {

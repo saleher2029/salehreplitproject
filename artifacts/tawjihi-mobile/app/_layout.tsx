@@ -7,8 +7,8 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
-import { I18nManager } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { AppState, AppStateStatus, I18nManager } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -23,11 +23,12 @@ I18nManager.forceRTL(true);
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+  defaultOptions: { queries: { retry: 1, staleTime: 10_000 } },
 });
 
 function RootLayoutNav() {
   const { isLoading, user } = useAuth();
+  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     if (!isLoading) {
@@ -38,6 +39,16 @@ function RootLayoutNav() {
       }
     }
   }, [isLoading, user]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState: AppStateStatus) => {
+      if (appState.current.match(/inactive|background/) && nextState === "active") {
+        queryClient.invalidateQueries();
+      }
+      appState.current = nextState;
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

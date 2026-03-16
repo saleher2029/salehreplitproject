@@ -33,6 +33,7 @@ export default function SubjectsScreen() {
     queryKey: ["subjects", specializationId],
     queryFn: () => apiRequest<Subject[]>(`/api/subjects?specializationId=${specializationId}`),
     enabled: !!specializationId,
+    refetchInterval: 30_000,
   });
 
   const onRefresh = useCallback(async () => {
