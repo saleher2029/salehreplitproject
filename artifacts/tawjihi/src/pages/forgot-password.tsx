@@ -4,12 +4,13 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Mail, ArrowRight, CheckCircle, BookOpen } from "lucide-react";
+import { Mail, ArrowRight, CheckCircle, BookOpen, ExternalLink } from "lucide-react";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [resetLink, setResetLink] = useState("");
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,7 +26,7 @@ export default function ForgotPassword() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "حدث خطأ");
       setSent(true);
-      if (data.devLink) console.info("[Dev] Reset link:", data.devLink);
+      if (data.resetLink) setResetLink(data.resetLink);
     } catch (e: any) {
       setError(e.message || "حدث خطأ، يرجى المحاولة مرة أخرى");
     } finally {
@@ -59,11 +60,26 @@ export default function ForgotPassword() {
                 <CheckCircle className="w-9 h-9 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold font-serif mb-2">تم إرسال الرابط!</h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  تحقق من بريدك الإلكتروني وانقر على زر إعادة تعيين كلمة المرور.
-                  الرابط صالح لمدة ساعة واحدة.
-                </p>
+                <h2 className="text-xl font-bold font-serif mb-2">تم إنشاء رابط إعادة التعيين</h2>
+                {resetLink ? (
+                  <div className="space-y-3 text-right">
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      اضغط على الزر أدناه لإعادة تعيين كلمة مرورك. الرابط صالح لمدة ساعة واحدة.
+                    </p>
+                    <a
+                      href={resetLink}
+                      className="flex items-center justify-center gap-2 w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-base hover:bg-primary/90 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      إعادة تعيين كلمة المرور
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    تحقق من بريدك الإلكتروني وانقر على زر إعادة تعيين كلمة المرور.
+                    الرابط صالح لمدة ساعة واحدة.
+                  </p>
+                )}
               </div>
               <Link href="/login">
                 <Button variant="outline" className="w-full h-11 rounded-xl font-bold">

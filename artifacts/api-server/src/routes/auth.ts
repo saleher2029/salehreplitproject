@@ -191,7 +191,11 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
     .set({ resetToken: rawToken, resetTokenExpiresAt: expiresAt })
     .where(eq(usersTable.id, user.id));
 
-  const siteUrl = process.env.SITE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  const replitDomains = process.env.REPLIT_DOMAINS;
+  const productionDomain = replitDomains ? replitDomains.split(",")[0].trim() : null;
+  const siteUrl = process.env.SITE_URL
+    || (productionDomain ? `https://${productionDomain}` : null)
+    || `https://${process.env.REPLIT_DEV_DOMAIN}`;
   const resetLink = `${siteUrl}/reset-password?token=${rawToken}`;
 
   const result = await sendPasswordResetEmail(email, user.name, resetLink);
@@ -200,8 +204,8 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
     res.json({ message: "تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني" });
   } else {
     res.json({
-      message: "تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني",
-      devLink: result.devLink,
+      message: "تم توليد رابط إعادة التعيين",
+      resetLink: result.devLink,
     });
   }
 });
