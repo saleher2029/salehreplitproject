@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const siteSettingsTable = pgTable("site_settings", {
   id: serial("id").primaryKey(),
   whatsappNumber: text("whatsapp_number").notNull().default("+970599000000"),
+  telegramUsername: text("telegram_username").notNull().default(""),
   subscriptionInfo: text("subscription_info").notNull().default("للاشتراك في الموقع، يرجى التواصل معنا عبر واتساب"),
 });
 

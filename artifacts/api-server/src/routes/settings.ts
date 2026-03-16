@@ -14,6 +14,7 @@ async function ensureSettings() {
   if (rows.length === 0) {
     const [created] = await db.insert(siteSettingsTable).values({
       whatsappNumber: "+970599000000",
+      telegramUsername: "",
       subscriptionInfo: "للاشتراك في الموقع، يرجى التواصل معنا عبر واتساب",
     }).returning();
     return created;

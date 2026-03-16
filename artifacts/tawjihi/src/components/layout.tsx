@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetSettings } from "@workspace/api-client-react";
-import { MessageCircle, BookOpen, Settings, LogOut, Trophy } from "lucide-react";
+import { MessageCircle, Send, BookOpen, Settings, LogOut, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SettingsDrawer } from "@/components/settings-drawer";
 import { OnboardingModal } from "@/components/onboarding-modal";
@@ -31,22 +31,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background font-sans text-foreground flex flex-col" dir="rtl">
 
       {/* ── شريط الاشتراك ────────────────────────────────────────────────── */}
-      {settings?.whatsappNumber && (
+      {(settings?.whatsappNumber || settings?.telegramUsername) && (
         <div className="bg-primary text-primary-foreground py-2 px-4 flex justify-center sm:justify-between items-center text-sm shadow-md z-10 relative flex-wrap gap-2">
+          <span className="font-semibold text-center">
+            {settings.subscriptionInfo || "اشترك الآن للوصول إلى كافة الامتحانات!"}
+          </span>
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-center">
-              {settings.subscriptionInfo || "اشترك الآن للوصول إلى كافة الامتحانات!"}
-            </span>
+            {settings?.whatsappNumber && (
+              <a
+                href={`https://wa.me/${settings.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent("مرحباً، أريد الاشتراك في منصة امتحانات توجيهي")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors font-bold"
+              >
+                <MessageCircle className="w-4 h-4" />
+                واتساب
+              </a>
+            )}
+            {settings?.telegramUsername && (
+              <a
+                href={`https://t.me/${settings.telegramUsername}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors font-bold"
+              >
+                <Send className="w-4 h-4" />
+                تيلجرام
+              </a>
+            )}
           </div>
-          <a
-            href={`https://wa.me/${settings.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent("مرحباً، أريد الاشتراك في منصة امتحانات توجيهي")}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors font-bold"
-          >
-            <MessageCircle className="w-4 h-4" />
-            تواصل عبر واتساب
-          </a>
         </div>
       )}
 

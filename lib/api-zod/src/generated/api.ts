@@ -496,6 +496,7 @@ export const DeleteUserParams = zod.object({
 export const GetSettingsResponse = zod.object({
   id: zod.number(),
   whatsappNumber: zod.string(),
+  telegramUsername: zod.string(),
   subscriptionInfo: zod.string(),
 });
 
@@ -504,11 +505,13 @@ export const GetSettingsResponse = zod.object({
  */
 export const UpdateSettingsBody = zod.object({
   whatsappNumber: zod.string(),
+  telegramUsername: zod.string(),
   subscriptionInfo: zod.string(),
 });
 
 export const UpdateSettingsResponse = zod.object({
   id: zod.number(),
   whatsappNumber: zod.string(),
+  telegramUsername: zod.string(),
   subscriptionInfo: zod.string(),
 });

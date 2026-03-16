@@ -242,11 +242,13 @@ export interface UpdateUserBody {
 export interface SiteSettings {
   id: number;
   whatsappNumber: string;
+  telegramUsername: string;
   subscriptionInfo: string;
 }
 
 export interface UpdateSettingsBody {
   whatsappNumber: string;
+  telegramUsername: string;
   subscriptionInfo: string;
 }
 
