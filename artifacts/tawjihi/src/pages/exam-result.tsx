@@ -331,7 +331,10 @@ export default function ExamResult({ params }: { params: { id: string } }) {
           <Button variant="outline" className="w-full h-12 rounded-xl font-bold">امتحاناتي</Button>
         </Link>
         {result.unitId && (
-          <Link href={`/unit/${result.unitId}?from=result&resultId=${result.id}`} className="flex-1 min-w-[130px]">
+          <Link
+            href={`/unit/${result.unitId}${result.subjectId ? `?subjectId=${result.subjectId}` : ""}`}
+            className="flex-1 min-w-[130px]"
+          >
             <Button className="w-full h-12 rounded-xl font-bold">تقدم ←</Button>
           </Link>
         )}

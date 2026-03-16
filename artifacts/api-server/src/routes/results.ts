@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, examResultsTable, answerDetailsTable, questionsTable, examsTable, usersTable } from "@workspace/db";
+import { db, examResultsTable, answerDetailsTable, questionsTable, examsTable, usersTable, unitsTable } from "@workspace/db";
 import { eq, isNotNull } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../lib/auth";
 import {
@@ -179,6 +179,7 @@ router.get("/results/:id", requireAuth, async (req, res): Promise<void> => {
   }
 
   const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, result.examId));
+  const [unit] = exam?.unitId ? await db.select().from(unitsTable).where(eq(unitsTable.id, exam.unitId)) : [undefined];
   const answerDetailRows = await db.select().from(answerDetailsTable).where(eq(answerDetailsTable.resultId, result.id));
   const questions = await db.select().from(questionsTable).where(eq(questionsTable.examId, result.examId));
   const questionMap = new Map(questions.map(q => [q.id, q]));
@@ -204,6 +205,7 @@ router.get("/results/:id", requireAuth, async (req, res): Promise<void> => {
     examId: result.examId,
     examTitle: exam?.title ?? "اختبار محذوف",
     unitId: exam?.unitId ?? null,
+    subjectId: unit?.subjectId ?? null,
     userId: result.userId,
     score: result.score,
     totalQuestions: result.totalQuestions,

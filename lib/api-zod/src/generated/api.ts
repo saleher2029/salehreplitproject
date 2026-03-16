@@ -423,6 +423,7 @@ export const GetResultResponse = zod.object({
   examId: zod.number(),
   examTitle: zod.string(),
   unitId: zod.number().nullish(),
+  subjectId: zod.number().nullish(),
   userId: zod.number(),
   score: zod.number(),
   totalQuestions: zod.number(),
