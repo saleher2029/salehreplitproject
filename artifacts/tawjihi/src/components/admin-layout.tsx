@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Layout } from "./layout";
-import { Book, Layers, FileText, Users, Settings, Grid } from "lucide-react";
+import { Book, Layers, FileText, Users, Settings, Grid, MessageSquare } from "lucide-react";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -12,6 +12,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/admin/units", label: "الوحدات", icon: Book },
     { href: "/admin/exams", label: "الامتحانات والأسئلة", icon: FileText },
     { href: "/admin/users", label: "المستخدمين", icon: Users },
+    { href: "/admin/notes", label: "ملاحظات الطلبة", icon: MessageSquare },
     { href: "/admin/settings", label: "الإعدادات", icon: Settings },
   ];
 

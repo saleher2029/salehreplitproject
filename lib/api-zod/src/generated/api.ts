@@ -403,6 +403,7 @@ export const SubmitExamBody = zod.object({
       selectedOption: zod.enum(["A", "B", "C", "D"]),
     }),
   ),
+  bookmarkedQuestionIds: zod.array(zod.number()).optional(),
 });
 
 /**
@@ -421,6 +422,9 @@ export const GetResultResponse = zod.object({
   totalQuestions: zod.number(),
   percentage: zod.number(),
   completedAt: zod.date(),
+  difficulty: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  bookmarkedQuestions: zod.string().nullish(),
   answers: zod.array(
     zod.object({
       questionId: zod.number(),

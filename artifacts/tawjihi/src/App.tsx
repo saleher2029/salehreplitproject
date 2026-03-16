@@ -29,6 +29,7 @@ import AdminUnits from "@/pages/admin/units";
 import AdminExams from "@/pages/admin/exams";
 import AdminQuestions from "@/pages/admin/questions";
 import AdminUsers from "@/pages/admin/users";
+import AdminNotes from "@/pages/admin/notes";
 import AdminSettings from "@/pages/admin/settings";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,7 @@ function Router() {
       <ProtectedRoute path="/admin/exams" component={AdminExams} adminOnly layout={AdminLayout} />
       <ProtectedRoute path="/admin/questions" component={AdminQuestions} adminOnly layout={AdminLayout} />
       <ProtectedRoute path="/admin/users" component={AdminUsers} adminOnly layout={AdminLayout} />
+      <ProtectedRoute path="/admin/notes" component={AdminNotes} adminOnly layout={AdminLayout} />
       <ProtectedRoute path="/admin/settings" component={AdminSettings} adminOnly layout={AdminLayout} />
 
       <Route component={NotFound} />

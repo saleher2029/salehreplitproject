@@ -12,6 +12,9 @@ export const examResultsTable = pgTable("exam_results", {
   totalQuestions: integer("total_questions").notNull(),
   percentage: real("percentage").notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }).notNull().defaultNow(),
+  difficulty: text("difficulty"),             // easy | medium | hard
+  notes: text("notes"),                        // student notes
+  bookmarkedQuestions: text("bookmarked_questions"), // JSON array of question IDs
 });
 
 export const answerDetailsTable = pgTable("answer_details", {

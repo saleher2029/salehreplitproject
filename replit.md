@@ -36,6 +36,13 @@ A full Arabic Tawjihi (high school final exam) practice platform.
 - Admin dashboard for full CRUD management
 - Subscription system with WhatsApp contact
 - Fully Arabic RTL interface
+- **Exam progress saving**: localStorage saves progress per user/exam (survives network drops/page reload)
+- **Image zoom modal**: click any question image to open full-screen zoom overlay
+- **Bookmark (star) per question**: mark questions as important (orange dot in grid); stored and sent with submission
+- **Difficulty rating**: after exam, student rates difficulty (سهل/متوسط/صعب) sent to API
+- **Student notes**: textarea after exam for student feedback, stored in DB, visible to admin
+- **Admin "ملاحظات الطلبة" page**: `/admin/notes` shows all notes with difficulty stats, expandable cards
+- **Bookmarked questions section** in exam result page showing the student's starred questions
 
 ### Admin Credentials
 - Username: `admin`
