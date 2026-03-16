@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -20,13 +21,20 @@ import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/utils/api";
 
-interface Specialization {
-  id: number;
-  name: string;
-}
+interface Specialization { id: number; name: string; }
 
-const SPEC_ICONS = ["book", "award", "cpu", "globe", "heart", "layers", "star", "zap", "compass", "feather"] as const;
-const SPEC_COLORS = ["#1E40AF", "#7C3AED", "#059669", "#D97706", "#DC2626", "#0891B2", "#4F46E5", "#DB2777", "#0F766E", "#9333EA"];
+const CARD_GRADIENTS = [
+  ["#6C63FF", "#B15EFF"],
+  ["#FF6B6B", "#FF8E53"],
+  ["#00C896", "#00A8CC"],
+  ["#FFB347", "#FF6B6B"],
+  ["#4ECDC4", "#44A08D"],
+  ["#A8EDEA", "#FED6E3"],
+  ["#F093FB", "#F5576C"],
+  ["#4FACFE", "#00F2FE"],
+] as const;
+
+const SPEC_ICONS: Array<keyof typeof Feather.glyphMap> = ["book-open", "cpu", "globe", "heart", "layers", "star", "zap", "compass"];
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -52,55 +60,67 @@ export default function HomeScreen() {
 
   const greeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return "صباح الخير";
-    if (h < 17) return "مساء الخير";
-    return "مساء النور";
+    if (h < 12) return "صباح النشاط";
+    if (h < 17) return "مساء التفوق";
+    return "مساء الدراسة";
   };
 
   const renderItem = ({ item, index }: { item: Specialization; index: number }) => {
-    const color = SPEC_COLORS[index % SPEC_COLORS.length];
+    const grad = CARD_GRADIENTS[index % CARD_GRADIENTS.length];
     const icon = SPEC_ICONS[index % SPEC_ICONS.length];
     return (
       <Pressable
-        style={({ pressed }) => [styles.card, { backgroundColor: C.card, opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
+        style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] }]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           router.push({ pathname: "/subjects", params: { specializationId: item.id, name: item.name } });
         }}
       >
-        <View style={[styles.cardIcon, { backgroundColor: color + "18" }]}>
-          <Feather name={icon as any} size={24} color={color} />
-        </View>
-        <Text style={[styles.cardTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]} numberOfLines={2}>
-          {item.name}
-        </Text>
-        <View style={styles.cardFooter}>
-          <Feather name="chevron-left" size={18} color={C.textMuted} />
-        </View>
+        <LinearGradient colors={[grad[0], grad[1]]} style={styles.specCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <View style={styles.specIconBg}>
+            <Feather name={icon} size={26} color="#fff" />
+          </View>
+          <Text style={[styles.specName, { fontFamily: "Tajawal_700Bold" }]} numberOfLines={2}>{item.name}</Text>
+          <View style={styles.specArrow}>
+            <Feather name="arrow-left" size={16} color="rgba(255,255,255,0.7)" />
+          </View>
+        </LinearGradient>
       </Pressable>
     );
   };
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
-      <View style={[styles.header, { paddingTop: topPad + 16, backgroundColor: C.card, borderBottomColor: C.border }]}>
-        <View>
-          <Text style={[styles.greeting, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>{greeting()}</Text>
-          <Text style={[styles.userName, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>
-            {user?.name || "طالب"}
-          </Text>
+      {/* Header */}
+      <LinearGradient
+        colors={isDark ? ["#130F3A", "#07061A"] : ["#6C63FF", "#9B59F5"]}
+        style={[styles.header, { paddingTop: topPad + 16 }]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerRow}>
+          <Pressable
+            style={[styles.avatarBtn, { backgroundColor: "rgba(255,255,255,0.2)" }]}
+            onPress={() => router.push("/(main)/profile")}
+          >
+            <Text style={[styles.avatarLetter, { fontFamily: "Tajawal_700Bold" }]}>
+              {(user?.name || "T")[0].toUpperCase()}
+            </Text>
+          </Pressable>
+          <View style={styles.headerText}>
+            <Text style={[styles.greetText, { fontFamily: "Tajawal_400Regular" }]}>{greeting()}</Text>
+            <Text style={[styles.nameText, { fontFamily: "Tajawal_700Bold" }]} numberOfLines={1}>
+              {user?.name || "طالب"}
+            </Text>
+          </View>
         </View>
-        <View style={[styles.avatarCircle, { backgroundColor: C.primary + "18" }]}>
-          <Text style={[styles.avatarLetter, { color: C.primary, fontFamily: "Tajawal_700Bold" }]}>
-            {(user?.name || "T")[0].toUpperCase()}
-          </Text>
-        </View>
-      </View>
 
-      <View style={[styles.sectionHeader, { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 12 }]}>
-        <Text style={[styles.sectionTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>التخصصات</Text>
-        <Text style={[styles.sectionSub, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>اختر تخصصك للبدء</Text>
-      </View>
+        <View style={styles.subtitleRow}>
+          <View style={[styles.subtitleBadge, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+            <Feather name="target" size={14} color="#fff" />
+            <Text style={[styles.subtitleText, { fontFamily: "Tajawal_500Medium" }]}>اختر تخصصك وابدأ الآن</Text>
+          </View>
+        </View>
+      </LinearGradient>
 
       {isLoading && (
         <View style={styles.center}>
@@ -110,18 +130,20 @@ export default function HomeScreen() {
 
       {!!error && (
         <View style={styles.center}>
-          <Feather name="wifi-off" size={40} color={C.textMuted} />
-          <Text style={[styles.errorMsg, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>تعذّر تحميل البيانات</Text>
-          <Pressable onPress={() => refetch()} style={[styles.retryBtn, { backgroundColor: C.primary + "18" }]}>
-            <Text style={[styles.retryText, { color: C.primary, fontFamily: "Tajawal_500Medium" }]}>إعادة المحاولة</Text>
-          </Pressable>
+          <View style={[styles.errorCard, { backgroundColor: C.card }]}>
+            <Feather name="wifi-off" size={36} color={C.error} />
+            <Text style={[styles.errorTitle, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>تعذّر الاتصال</Text>
+            <Pressable onPress={() => refetch()} style={{ backgroundColor: C.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
+              <Text style={[{ color: "#fff", fontFamily: "Tajawal_700Bold", fontSize: 15 }]}>إعادة المحاولة</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
       {!isLoading && !error && (!specs || specs.length === 0) && (
         <View style={styles.center}>
           <Feather name="inbox" size={48} color={C.textMuted} />
-          <Text style={[styles.emptyText, { color: C.textSecondary, fontFamily: "Tajawal_400Regular" }]}>لا توجد تخصصات بعد</Text>
+          <Text style={[{ color: C.textSecondary, fontFamily: "Tajawal_400Regular", fontSize: 15 }]}>لا توجد تخصصات بعد</Text>
         </View>
       )}
 
@@ -131,7 +153,12 @@ export default function HomeScreen() {
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
+          ListHeaderComponent={
+            <Text style={[styles.listHeader, { color: C.text, fontFamily: "Tajawal_700Bold" }]}>التخصصات</Text>
+          }
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -141,22 +168,24 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1 },
-  greeting: { fontSize: 13, textAlign: "right" },
-  userName: { fontSize: 20, textAlign: "right" },
-  avatarCircle: { width: 46, height: 46, borderRadius: 23, justifyContent: "center", alignItems: "center" },
-  avatarLetter: { fontSize: 20 },
-  sectionHeader: {},
-  sectionTitle: { fontSize: 22, textAlign: "right" },
-  sectionSub: { fontSize: 14, textAlign: "right" },
+  header: { paddingHorizontal: 20, paddingBottom: 24 },
+  headerRow: { flexDirection: "row-reverse", alignItems: "center", gap: 14, marginBottom: 14 },
+  avatarBtn: { width: 48, height: 48, borderRadius: 16, justifyContent: "center", alignItems: "center" },
+  avatarLetter: { fontSize: 22, color: "#fff" },
+  headerText: { flex: 1, alignItems: "flex-end" },
+  greetText: { fontSize: 13, color: "rgba(255,255,255,0.7)" },
+  nameText: { fontSize: 20, color: "#fff" },
+  subtitleRow: { alignItems: "flex-end" },
+  subtitleBadge: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  subtitleText: { fontSize: 13, color: "#fff" },
   list: { paddingHorizontal: 16, paddingTop: 8 },
-  card: { flexDirection: "row-reverse", alignItems: "center", padding: 16, borderRadius: 16, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2, gap: 14 },
-  cardIcon: { width: 50, height: 50, borderRadius: 14, justifyContent: "center", alignItems: "center" },
-  cardTitle: { flex: 1, fontSize: 16, textAlign: "right", lineHeight: 24 },
-  cardFooter: {},
-  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, paddingBottom: 80 },
-  errorMsg: { fontSize: 15, textAlign: "center" },
-  emptyText: { fontSize: 15, textAlign: "center" },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-  retryText: { fontSize: 14 },
+  listHeader: { fontSize: 20, textAlign: "right", marginTop: 16, marginBottom: 12 },
+  row: { gap: 12, justifyContent: "space-between" },
+  specCard: { width: "100%", borderRadius: 20, padding: 18, marginBottom: 12, minHeight: 130, justifyContent: "space-between" },
+  specIconBg: { width: 46, height: 46, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.25)", justifyContent: "center", alignItems: "center" },
+  specName: { fontSize: 15, color: "#fff", textAlign: "right", lineHeight: 22 },
+  specArrow: { alignSelf: "flex-end" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: 16, padding: 24 },
+  errorCard: { padding: 24, borderRadius: 20, alignItems: "center", gap: 14, width: "100%" },
+  errorTitle: { fontSize: 18 },
 });
