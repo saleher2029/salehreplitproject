@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetSettings } from "@workspace/api-client-react";
-import { MessageCircle, BookOpen, Settings, LogOut } from "lucide-react";
+import { MessageCircle, BookOpen, Settings, LogOut, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SettingsDrawer } from "@/components/settings-drawer";
 import { OnboardingModal } from "@/components/onboarding-modal";
@@ -65,7 +65,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {/* Navigation + User */}
           {user && (
             <div className="flex items-center gap-2 sm:gap-3">
-              <Link href="/my-exams" className="text-sm font-semibold hover:text-primary transition-colors">
+              <Link
+                href="/my-exams"
+                className="flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              >
+                <Trophy className="w-3.5 h-3.5" />
                 امتحاناتي
               </Link>
 
