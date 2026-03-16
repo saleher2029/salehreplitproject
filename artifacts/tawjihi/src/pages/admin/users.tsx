@@ -79,7 +79,8 @@ export default function AdminUsers() {
 
       {/* ── جدول المستخدمين ───────────────────────────────────────────────── */}
       <div className="border border-border rounded-2xl overflow-hidden bg-background">
-        <table className="w-full text-sm text-right">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[600px] text-sm text-right">
           <thead className="bg-muted/50 text-muted-foreground font-bold">
             <tr>
               <th className="px-5 py-4 border-b">#</th>
@@ -161,6 +162,7 @@ export default function AdminUsers() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* ── نافذة تأكيد الحذف ─────────────────────────────────────────────── */}

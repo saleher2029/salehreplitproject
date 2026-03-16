@@ -456,7 +456,8 @@ export default function AdminExams() {
 
       {/* ── Exams Table ─────────────────────────────────────────────────────── */}
       <div className="border border-border rounded-2xl overflow-hidden bg-background">
-        <table className="w-full text-sm text-right">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[750px] text-sm text-right">
           <thead className="bg-muted/50 text-muted-foreground font-bold">
             <tr>
               <th className="px-6 py-4 border-b">#</th>
@@ -526,6 +527,7 @@ export default function AdminExams() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
