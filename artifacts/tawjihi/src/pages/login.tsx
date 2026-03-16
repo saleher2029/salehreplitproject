@@ -197,6 +197,9 @@ export default function Login() {
                   <button type="button" onClick={() => resetForm("register")} className="text-sm text-primary font-semibold hover:underline block w-full">
                     ليس لديك حساب؟ أنشئ حساباً جديداً
                   </button>
+                  <a href={`${import.meta.env.BASE_URL}forgot-password`} className="text-sm text-muted-foreground font-semibold hover:text-primary transition-colors block w-full">
+                    نسيت كلمة المرور؟
+                  </a>
                   <button type="button" onClick={() => resetForm("main")} className="text-sm text-muted-foreground font-semibold hover:text-foreground">
                     العودة
                   </button>

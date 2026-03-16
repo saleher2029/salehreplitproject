@@ -11,6 +11,8 @@ import { AdminLayout } from "@/components/admin-layout";
 // Pages
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import Specializations from "@/pages/specializations";
 import Subjects from "@/pages/subjects";
 import Units from "@/pages/units";
@@ -31,20 +33,15 @@ import AdminSettings from "@/pages/admin/settings";
 
 const queryClient = new QueryClient();
 
-// Protected Route wrapper
 function ProtectedRoute({ component: Component, adminOnly = false, layout: Wrapper = Layout, ...rest }: any) {
   return (
     <Route {...rest}>
       {params => {
         const { user, isLoading } = useAuth();
-        if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full"></div></div>;
+        if (isLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full" /></div>;
         if (!user) return <Redirect to="/login" />;
-        if (adminOnly && user.role !== 'admin' && user.role !== 'supervisor') return <Redirect to="/" />;
-        return (
-          <Wrapper>
-            <Component params={params} />
-          </Wrapper>
-        );
+        if (adminOnly && user.role !== "admin" && user.role !== "supervisor") return <Redirect to="/" />;
+        return <Wrapper><Component params={params} /></Wrapper>;
       }}
     </Route>
   );
@@ -58,7 +55,9 @@ function Router() {
       <Route path="/login">
         {isLoading ? null : user ? <Redirect to="/" /> : <Login />}
       </Route>
-      
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+
       {/* Student Routes */}
       <ProtectedRoute path="/" component={Specializations} />
       <ProtectedRoute path="/specialization/:id" component={Subjects} />

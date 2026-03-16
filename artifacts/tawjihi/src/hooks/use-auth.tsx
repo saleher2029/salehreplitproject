@@ -7,6 +7,7 @@ type AuthContextType = {
   token: string | null;
   setAuth: (user: User, token: string) => void;
   clearAuth: () => void;
+  updateUser: (updates: Partial<User>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -18,11 +19,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (token) {
-      // In a real scenario, customFetch in api-client-react should use this token
-      // We will set it in localStorage so the interceptor can find it
       localStorage.setItem("tawjihi_token", token);
-      
-      getCurrentUser({ headers: { 'Authorization': `Bearer ${token}` } })
+      getCurrentUser({ headers: { Authorization: `Bearer ${token}` } })
         .then(u => setUser(u))
         .catch(() => {
           setToken(null);
@@ -46,8 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("tawjihi_token");
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...updates } : prev);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, token, setAuth, clearAuth }}>
+    <AuthContext.Provider value={{ user, isLoading, token, setAuth, clearAuth, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

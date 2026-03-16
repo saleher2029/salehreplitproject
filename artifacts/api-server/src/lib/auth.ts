@@ -5,13 +5,13 @@ import { eq } from "drizzle-orm";
 
 const JWT_SECRET = process.env.JWT_SECRET || "tawjihi-secret-key-2024";
 
-export function signToken(userId: number): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "30d" });
+export function signToken(userId: number, sessionToken: string): string {
+  return jwt.sign({ userId, sessionToken }, JWT_SECRET, { expiresIn: "30d" });
 }
 
-export function verifyToken(token: string): { userId: number } | null {
+export function verifyToken(token: string): { userId: number; sessionToken?: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: number };
+    return jwt.verify(token, JWT_SECRET) as { userId: number; sessionToken?: string };
   } catch {
     return null;
   }
@@ -34,6 +34,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({ error: "المستخدم غير موجود" });
     return;
   }
+
+  // ── Single device: reject if session was superseded ──────────────────────
+  if (
+    payload.sessionToken &&
+    user.sessionToken &&
+    payload.sessionToken !== user.sessionToken
+  ) {
+    res.status(401).json({ error: "تم تسجيل الدخول من جهاز آخر، يرجى تسجيل الدخول مجدداً" });
+    return;
+  }
+
   (req as any).user = user;
   next();
 }

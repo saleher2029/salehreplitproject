@@ -22,12 +22,17 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 A full Arabic Tawjihi (high school final exam) practice platform.
 
 ### Features
-- Login page with Guest/Google/Facebook/Admin options
+- Login page with Guest/Email/Admin options
 - Specialization selection (علمي, أدبي, صناعي, شرعي, زراعي)
 - Subject, Unit, and Exam hierarchy
 - Multiple choice exam-taking with auto-correction
 - Score display with percentage
 - "امتحاناتي" personal exam history page
+- **Onboarding modal**: after first login, users choose a display name
+- **Settings drawer**: edit name, password reset, WhatsApp support, logout
+- **Single device session**: only one device per account at a time (sessionToken in JWT+DB)
+- **Password reset via email**: forgot-password + reset-password pages with secure tokens
+- **Email service**: nodemailer with SMTP env vars (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SITE_URL); returns devLink if SMTP not configured
 - Admin dashboard for full CRUD management
 - Subscription system with WhatsApp contact
 - Fully Arabic RTL interface

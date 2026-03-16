@@ -10,6 +10,9 @@ export const usersTable = pgTable("users", {
   provider: text("provider"),
   providerId: text("provider_id"),
   passwordHash: text("password_hash"),
+  sessionToken: text("session_token"),
+  resetToken: text("reset_token"),
+  resetTokenExpiresAt: timestamp("reset_token_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
