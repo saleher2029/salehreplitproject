@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useGetExam, useSubmitExam } from "@workspace/api-client-react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -55,6 +55,10 @@ function clearProgress(key: string) {
 export default function TakeExam({ params }: { params: { id: string } }) {
   const { token, user } = useAuth();
   const examId = parseInt(params.id);
+  const search = useSearch();
+  const _sp = new URLSearchParams(search);
+  const navSubjectId = _sp.get("subjectId");
+  const navSpecializationId = _sp.get("specializationId");
   const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
   const reqOpts = { request: { headers } };
 
@@ -406,8 +410,18 @@ export default function TakeExam({ params }: { params: { id: string } }) {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
           <Button
             variant="outline"
-            onClick={() => setCurrentIdx(i => Math.max(0, i - 1))}
-            disabled={currentIdx === 0}
+            onClick={() => {
+              if (currentIdx === 0) {
+                const unitId = exam?.unitId;
+                const qs = new URLSearchParams();
+                if (navSubjectId) qs.set("subjectId", navSubjectId);
+                if (navSpecializationId) qs.set("specializationId", navSpecializationId);
+                const query = qs.toString();
+                setLocation(`/unit/${unitId}${query ? `?${query}` : ""}`);
+              } else {
+                setCurrentIdx(i => i - 1);
+              }
+            }}
             className="h-11 px-4 rounded-xl font-bold flex items-center gap-1"
           >
             <ChevronRight className="w-4 h-4" /> السابق

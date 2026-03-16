@@ -36,7 +36,7 @@ export default function Subjects({ params }: { params: { id: string } }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {data?.map((subject, i) => (
-          <Link key={subject.id} href={`/subject/${subject.id}`} className="block group">
+          <Link key={subject.id} href={`/subject/${subject.id}?specializationId=${specializationId}`} className="block group">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}

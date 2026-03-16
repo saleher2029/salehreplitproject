@@ -10,7 +10,9 @@ export default function Exams({ params }: { params: { id: string } }) {
   const { token } = useAuth();
   const unitId = parseInt(params.id);
   const search = useSearch();
-  const subjectId = new URLSearchParams(search).get("subjectId");
+  const sp = new URLSearchParams(search);
+  const subjectId = sp.get("subjectId");
+  const specializationId = sp.get("specializationId");
 
   const { data, isLoading } = useGetExams({ unitId }, {
     request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
@@ -30,7 +32,7 @@ export default function Exams({ params }: { params: { id: string } }) {
           <p className="text-muted-foreground font-medium">اختر امتحاناً للبدء</p>
         </div>
         {subjectId ? (
-          <Link href={`/subject/${subjectId}`}>
+          <Link href={`/subject/${subjectId}${specializationId ? `?specializationId=${specializationId}` : ""}`}>
             <Button variant="outline" className="rounded-xl font-bold">
               <ArrowRight className="ml-2 w-4 h-4" />
               العودة للوحدات
@@ -67,7 +69,7 @@ export default function Exams({ params }: { params: { id: string } }) {
                       {new Date(exam.createdAt).toLocaleDateString('ar-EG')}
                     </span>
                   </div>
-                  <Link href={`/exam/${exam.id}`}>
+                  <Link href={`/exam/${exam.id}?subjectId=${subjectId ?? ""}&specializationId=${specializationId ?? ""}`}>
                     <Button className="w-full sm:w-auto rounded-xl font-bold group">
                       <Play className="ml-2 w-4 h-4 group-hover:scale-110 transition-transform" fill="currentColor" />
                       بدء الامتحان

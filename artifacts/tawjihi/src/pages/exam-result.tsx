@@ -332,7 +332,7 @@ export default function ExamResult({ params }: { params: { id: string } }) {
         </Link>
         {result.unitId && (
           <Link
-            href={`/unit/${result.unitId}${result.subjectId ? `?subjectId=${result.subjectId}` : ""}`}
+            href={`/unit/${result.unitId}?subjectId=${result.subjectId ?? ""}&specializationId=${result.specializationId ?? ""}`}
             className="flex-1 min-w-[130px]"
           >
             <Button className="w-full h-12 rounded-xl font-bold">تقدم ←</Button>

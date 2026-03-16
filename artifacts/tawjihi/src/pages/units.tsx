@@ -1,5 +1,5 @@
 import { useGetUnits } from "@workspace/api-client-react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Bookmark, ChevronLeft, ArrowRight } from "lucide-react";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 export default function Units({ params }: { params: { id: string } }) {
   const { token } = useAuth();
   const subjectId = parseInt(params.id);
+  const search = useSearch();
+  const specializationId = new URLSearchParams(search).get("specializationId");
   const { data, isLoading } = useGetUnits({ subjectId }, {
     request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
   });
@@ -26,15 +28,24 @@ export default function Units({ params }: { params: { id: string } }) {
           <h1 className="text-3xl font-bold font-serif text-foreground">اختر الوحدة</h1>
           <p className="text-muted-foreground font-medium">الوحدات الدراسية ضمن هذه المادة</p>
         </div>
-        <Button variant="outline" className="rounded-xl font-bold" onClick={() => window.history.back()}>
-          <ArrowRight className="ml-2 w-4 h-4" />
-          العودة للمواد
-        </Button>
+        {specializationId ? (
+          <Link href={`/specialization/${specializationId}`}>
+            <Button variant="outline" className="rounded-xl font-bold">
+              <ArrowRight className="ml-2 w-4 h-4" />
+              العودة للمواد
+            </Button>
+          </Link>
+        ) : (
+          <Button variant="outline" className="rounded-xl font-bold" onClick={() => window.history.back()}>
+            <ArrowRight className="ml-2 w-4 h-4" />
+            العودة للمواد
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {data?.map((unit, i) => (
-          <Link key={unit.id} href={`/unit/${unit.id}?subjectId=${subjectId}`} className="block group">
+          <Link key={unit.id} href={`/unit/${unit.id}?subjectId=${subjectId}${specializationId ? `&specializationId=${specializationId}` : ""}`} className="block group">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
