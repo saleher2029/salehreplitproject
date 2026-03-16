@@ -203,6 +203,7 @@ router.get("/results/:id", requireAuth, async (req, res): Promise<void> => {
     id: result.id,
     examId: result.examId,
     examTitle: exam?.title ?? "اختبار محذوف",
+    unitId: exam?.unitId ?? null,
     userId: result.userId,
     score: result.score,
     totalQuestions: result.totalQuestions,

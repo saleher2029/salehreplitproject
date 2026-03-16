@@ -143,7 +143,7 @@ export default function TakeExam({ params }: { params: { id: string } }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exam?.id]); // re-shuffle only when exam changes
 
-  if (isLoading) return (
+  if (!exam && isLoading) return (
     <div className="flex flex-col justify-center items-center h-64 gap-4">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       <p className="text-muted-foreground font-medium">جاري تجهيز الامتحان...</p>
@@ -202,7 +202,7 @@ export default function TakeExam({ params }: { params: { id: string } }) {
               )}
             </div>
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <Button variant="outline" onClick={() => setLocation(-1 as any)} className="h-12 rounded-xl font-bold">
+              <Button variant="outline" onClick={() => window.history.back()} className="h-12 rounded-xl font-bold">
                 <ArrowRight className="w-4 h-4 ml-2" /> العودة
               </Button>
               <Button onClick={() => { setPhase("exam"); setCurrentIdx(0); }} className="h-12 rounded-xl font-bold">

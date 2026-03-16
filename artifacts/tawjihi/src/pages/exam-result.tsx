@@ -74,13 +74,22 @@ export default function ExamResult({ params }: { params: { id: string } }) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-6" dir="rtl">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2 flex-wrap">
         <h1 className="text-2xl font-bold font-serif">النتيجة والتصحيح</h1>
-        <Link href="/my-exams">
-          <Button variant="outline" className="rounded-xl font-bold">
-            <ArrowRight className="ml-2 w-4 h-4" /> امتحاناتي
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          {result.unitId && (
+            <Link href={`/unit/${result.unitId}`}>
+              <Button variant="secondary" className="rounded-xl font-bold">
+                <ArrowRight className="ml-2 w-4 h-4" /> تقدم
+              </Button>
+            </Link>
+          )}
+          <Link href="/my-exams">
+            <Button variant="outline" className="rounded-xl font-bold">
+              امتحاناتي
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* ── Score card ────────────────────────────────────────────────────── */}
