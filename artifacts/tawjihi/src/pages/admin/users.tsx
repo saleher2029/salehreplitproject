@@ -7,7 +7,8 @@ import { Trash2 } from "lucide-react";
 export default function AdminUsers() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
-  const options = { request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} } };
+  const _h: Record<string, string> = token ? { 'Authorization': `Bearer ` } : {};
+  const options = { request: { headers: _h } };
   
   const { data: users, isLoading } = useGetUsers(options);
   const updateMut = useUpdateUser(options);

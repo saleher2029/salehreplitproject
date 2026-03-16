@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 export default function AdminSubjects() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
-  const options = { request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} } };
+  const _h: Record<string, string> = token ? { 'Authorization': `Bearer ` } : {};
+  const options = { request: { headers: _h } };
   
   const { data: subjects, isLoading } = useGetSubjects({}, options);
   const { data: specializations } = useGetSpecializations(options);

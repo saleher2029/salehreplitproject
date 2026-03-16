@@ -30,10 +30,11 @@ function imageToBase64(file: File): Promise<string> {
 export default function AdminExams() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
-  const opts = { request: { headers: token ? { Authorization: `Bearer ${token}` } : {} } };
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+  const opts = { request: { headers } };
 
   const { data: exams, isLoading } = useGetExams({}, opts);
-  const { data: specializations } = useGetSpecializations({}, opts);
+  const { data: specializations } = useGetSpecializations(opts);
   const { data: allSubjects } = useGetSubjects({}, opts);
   const { data: allUnits } = useGetUnits({}, opts);
 

@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 export default function AdminUnits() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
-  const options = { request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} } };
+  const _h: Record<string, string> = token ? { 'Authorization': `Bearer ` } : {};
+  const options = { request: { headers: _h } };
   
   const { data: units, isLoading } = useGetUnits({}, options);
   const { data: subjects } = useGetSubjects({}, options);

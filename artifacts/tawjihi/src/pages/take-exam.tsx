@@ -23,7 +23,8 @@ const OPTION_LABELS = ["أ", "ب", "ج", "د"];
 export default function TakeExam({ params }: { params: { id: string } }) {
   const { token } = useAuth();
   const examId = parseInt(params.id);
-  const reqOpts = { request: { headers: token ? { Authorization: `Bearer ${token}` } : {} } };
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+  const reqOpts = { request: { headers } };
 
   const { data: exam, isLoading } = useGetExam(examId, reqOpts);
   const submitMutation = useSubmitExam(reqOpts);

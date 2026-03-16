@@ -21,8 +21,9 @@ const OPTION_KEYS = ["A", "B", "C", "D"] as const;
 export default function ExamResult({ params }: { params: { id: string } }) {
   const { token } = useAuth();
   const resultId = parseInt(params.id);
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
   const { data: result, isLoading } = useGetResult(resultId, {
-    request: { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+    request: { headers },
   });
 
   if (isLoading) return (
