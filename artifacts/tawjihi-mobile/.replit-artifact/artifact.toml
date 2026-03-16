@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/tawjihi-mobile/"
+title = "Tawjihi Mobile"
+version = "1.0.0"
+id = "artifacts/tawjihi-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+localPort = 24441
+name = "expo"
+paths = ["/tawjihi-mobile/"]
+
+[services.development]
+run = "pnpm --filter @workspace/tawjihi-mobile run dev"
+
+[services.env]
+PORT = "24441"
+BASE_PATH = "/tawjihi-mobile/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/tawjihi-mobile", "run", "build"]
+run = ["pnpm", "--filter", "@workspace/tawjihi-mobile", "run", "serve"]
