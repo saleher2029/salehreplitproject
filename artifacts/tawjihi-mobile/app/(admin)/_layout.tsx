@@ -6,11 +6,14 @@ import { Platform, StyleSheet, View } from "react-native";
 
 import Colors from "@/constants/colors";
 import { useAppTheme } from "@/hooks/useAppTheme";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AdminTabLayout() {
   const { isDark, C } = useAppTheme();
+  const { user } = useAuth();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const isAdmin = user?.role === "admin";
 
   return (
     <Tabs
@@ -47,6 +50,14 @@ export default function AdminTabLayout() {
         options={{
           title: "المحتوى",
           tabBarIcon: ({ color }) => <Feather name="layers" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="users"
+        options={{
+          title: "المستخدمين",
+          tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
+          href: isAdmin ? "/(admin)/users" : null,
         }}
       />
       <Tabs.Screen

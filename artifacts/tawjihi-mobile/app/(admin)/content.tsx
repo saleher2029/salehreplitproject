@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 
 import { useAppTheme } from "@/hooks/useAppTheme";
 import { useAuth } from "@/context/AuthContext";
@@ -73,11 +73,19 @@ export default function ContentManagement() {
   const config = LEVEL_CONFIG[current.level];
   const parentId = current.id;
   const canCreate = current.level === "specs" || !!parentId;
+  const isQuestionLevel = current.level === "questions";
 
-  const queryKey = [config.apiPath, parentId ?? "all"];
+  const queryKey = isQuestionLevel
+    ? ["/api/exams", parentId, "questions"]
+    : [config.apiPath, parentId ?? "all"];
+
   const { data: items, isLoading, isError, refetch } = useQuery<any[]>({
     queryKey,
     queryFn: async () => {
+      if (isQuestionLevel && parentId) {
+        const exam = await apiRequest<any>(`/api/exams/${parentId}`, { token });
+        return exam.questions ?? [];
+      }
       let url = config.apiPath;
       if (config.parentKey && parentId) {
         url += `?${config.parentKey}=${parentId}`;
@@ -103,7 +111,6 @@ export default function ContentManagement() {
 
   const drillDown = (item: any) => {
     if (!config.nextLevel) return;
-    const nextConfig = LEVEL_CONFIG[config.nextLevel];
     setBreadcrumbs(prev => [...prev, { level: config.nextLevel!, id: item.id, name: item.title || item.name }]);
   };
 
@@ -160,7 +167,7 @@ export default function ContentManagement() {
         correctOption: formCorrect,
         orderIndex: editingItem?.orderIndex ?? (items?.length ?? 0),
       };
-      if (config.parentKey && parentId) body[config.parentKey] = parentId;
+      if (parentId) body.examId = parentId;
     } else if (current.level === "exams") {
       if (!formName.trim()) return;
       body = {
@@ -239,8 +246,12 @@ export default function ContentManagement() {
     <View style={{ flex: 1, backgroundColor: C.background }}>
       <View style={[styles.topBar, { paddingTop: topPad + 8, backgroundColor: C.card, borderBottomColor: C.border }]}>
         <View style={styles.topRow}>
-          {breadcrumbs.length > 1 && (
+          {breadcrumbs.length > 1 ? (
             <Pressable onPress={goBack} style={styles.backBtn}>
+              <Feather name="arrow-right" size={20} color={C.primary} />
+            </Pressable>
+          ) : (
+            <Pressable onPress={() => router.back()} style={styles.backBtn}>
               <Feather name="arrow-right" size={20} color={C.primary} />
             </Pressable>
           )}
@@ -300,7 +311,6 @@ export default function ContentManagement() {
         />
       )}
 
-      {/* ── Create/Edit Modal ── */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <Pressable style={styles.overlay} onPress={() => setModalVisible(false)}>
           <Pressable style={[styles.sheet, { backgroundColor: C.card }]} onPress={e => e.stopPropagation()}>

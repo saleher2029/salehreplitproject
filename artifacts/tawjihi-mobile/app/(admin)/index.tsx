@@ -52,11 +52,13 @@ export default function AdminDashboard() {
     { title: "المستخدمين", value: users?.length ?? "—", icon: "users" as const, color: "#EC4899", bg: "rgba(236,72,153,0.12)" },
   ];
 
+  const isAdmin = user?.role === "admin";
   const quickLinks = [
-    { title: "إدارة التخصصات", icon: "layers" as const, screen: "specs" },
-    { title: "إدارة المواد", icon: "book" as const, screen: "subjects" },
-    { title: "إدارة الوحدات", icon: "folder" as const, screen: "units" },
-    { title: "إدارة الامتحانات", icon: "file-text" as const, screen: "exams" },
+    { title: "إدارة التخصصات", icon: "layers" as const, screen: "specs", type: "content" as const },
+    { title: "إدارة المواد", icon: "book" as const, screen: "subjects", type: "content" as const },
+    { title: "إدارة الوحدات", icon: "folder" as const, screen: "units", type: "content" as const },
+    { title: "إدارة الامتحانات", icon: "file-text" as const, screen: "exams", type: "content" as const },
+    ...(isAdmin ? [{ title: "إدارة المستخدمين", icon: "users" as const, screen: "", type: "users" as const }] : []),
   ];
 
   return (
@@ -93,7 +95,13 @@ export default function AdminDashboard() {
           <Pressable
             key={i}
             style={({ pressed }) => [styles.quickLink, { backgroundColor: C.card, borderColor: C.border, opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => router.push({ pathname: "/(admin)/content", params: { startLevel: link.screen } })}
+            onPress={() => {
+              if (link.type === "users") {
+                router.push("/(admin)/users");
+              } else {
+                router.push({ pathname: "/(admin)/content", params: { startLevel: link.screen } });
+              }
+            }}
           >
             <View style={[styles.qlIcon, { backgroundColor: C.primary + "1A" }]}>
               <Feather name={link.icon} size={18} color={C.primary} />
