@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, Edit2, Trash2, Clock, BookOpen, ChevronRight,
-  ImagePlus, X, CheckCircle, CheckCircle2, ArrowLeft,
+  ImagePlus, X, CheckCircle, CheckCircle2, ArrowLeft, Copy, Check,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -53,12 +53,13 @@ export default function AdminExams() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Exam form state
-  const [specId, setSpecId] = useState("");
+  const [selectedSpecIds, setSelectedSpecIds] = useState<number[]>([]);
   const [subjectId, setSubjectId] = useState("");
   const [unitId, setUnitId] = useState("");
   const [title, setTitle] = useState("");
   const [timeLimit, setTimeLimit] = useState("");
   const [questionLimit, setQuestionLimit] = useState("");
+  const [duplicateStatus, setDuplicateStatus] = useState<string | null>(null);
 
   // Question form state
   const [editingQId, setEditingQId] = useState<number | null>(null);
@@ -68,7 +69,8 @@ export default function AdminExams() {
   const [qCorrect, setQCorrect] = useState<"A" | "B" | "C" | "D">("A");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredSubjects = allSubjects?.filter(s => !specId || s.specializationId === parseInt(specId)) ?? [];
+  const primarySpecId = selectedSpecIds.length > 0 ? selectedSpecIds[0] : null;
+  const filteredSubjects = allSubjects?.filter(s => !primarySpecId || s.specializationId === primarySpecId) ?? [];
   const filteredUnits = allUnits?.filter(u => !subjectId || u.subjectId === parseInt(subjectId)) ?? [];
 
   // Fetch questions for active exam
@@ -82,8 +84,9 @@ export default function AdminExams() {
   const openCreate = () => {
     setEditingExamId(null);
     setActiveExamId(null);
-    setSpecId(""); setSubjectId(""); setUnitId(""); setTitle(""); setTimeLimit(""); setQuestionLimit("");
+    setSelectedSpecIds([]); setSubjectId(""); setUnitId(""); setTitle(""); setTimeLimit(""); setQuestionLimit("");
     setSaveError(null);
+    setDuplicateStatus(null);
     setPhase("exam");
     setIsOpen(true);
   };
@@ -98,9 +101,10 @@ export default function AdminExams() {
     const unit = allUnits?.find(u => u.id === item.unitId);
     const sub = allSubjects?.find(s => s.id === unit?.subjectId);
     setSubjectId(unit?.subjectId?.toString() ?? "");
-    setSpecId(sub?.specializationId?.toString() ?? "");
+    setSelectedSpecIds(sub ? [sub.specializationId] : []);
     setUnitId(item.unitId?.toString() ?? "");
     setSaveError(null);
+    setDuplicateStatus(null);
     setPhase("exam");
     setIsOpen(true);
   };
@@ -114,10 +118,48 @@ export default function AdminExams() {
     setIsOpen(true);
   };
 
+  const [isDuplicating, setIsDuplicating] = useState(false);
+
+  const handleFinishExam = async () => {
+    if (activeExamId && selectedSpecIds.length > 1 && primarySpecId) {
+      const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
+      setIsDuplicating(true);
+      try {
+        const res = await fetch(`/api/exams/${activeExamId}/duplicate-to-specs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ specializationIds: otherSpecIds }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "فشل النسخ");
+        const successCount = data.results?.filter((r: any) => r.examId).length ?? 0;
+        const failedResults = data.results?.filter((r: any) => !r.examId) ?? [];
+        let msg = `✓ تم نسخ الاختبار إلى ${successCount} تخصص بنجاح`;
+        if (failedResults.length > 0) {
+          const specNames = failedResults.map((r: any) => {
+            const spec = specializations?.find(s => s.id === r.specId);
+            return `${spec?.name || r.specId}: ${r.status}`;
+          });
+          msg += `\n⚠ تعذر النسخ: ${specNames.join("، ")}`;
+        }
+        setDuplicateStatus(msg);
+      } catch (e: any) {
+        setDuplicateStatus(`⚠ ${e.message}`);
+      } finally {
+        setIsDuplicating(false);
+      }
+    }
+    setIsOpen(false);
+    setActiveExamId(null);
+    setEditingExamId(null);
+    queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+  };
+
   const closeDialog = () => {
     setIsOpen(false);
     setActiveExamId(null);
     setEditingExamId(null);
+    setDuplicateStatus(null);
     queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
   };
 
@@ -232,6 +274,16 @@ export default function AdminExams() {
 
   return (
     <div className="space-y-6">
+      {/* Duplicate status banner */}
+      {duplicateStatus && (
+        <div className="p-4 rounded-xl bg-primary/10 text-primary text-sm font-medium border border-primary/20 whitespace-pre-line flex items-start justify-between gap-3">
+          <span>{duplicateStatus}</span>
+          <button onClick={() => setDuplicateStatus(null)} className="shrink-0 p-1 rounded hover:bg-primary/20 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold font-serif">إدارة الامتحانات</h1>
@@ -263,18 +315,53 @@ export default function AdminExams() {
           {phase === "exam" && (
             <div className="space-y-5 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-muted-foreground">التخصص</label>
-                <select value={specId} onChange={e => { setSpecId(e.target.value); setSubjectId(""); setUnitId(""); }}
-                  className="flex h-12 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <option value="">اختر التخصص...</option>
-                  {specializations?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <label className="text-sm font-bold text-muted-foreground">التخصصات</label>
+                <p className="text-xs text-muted-foreground">اختر تخصصاً أو أكثر — التخصص الأول يحدد المادة والوحدة، والباقي يتم نسخ الاختبار إليها تلقائياً</p>
+                <div className="flex flex-wrap gap-2 p-3 border border-input rounded-xl bg-background">
+                  {specializations?.map(s => {
+                    const isSelected = selectedSpecIds.includes(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            const newIds = selectedSpecIds.filter(id => id !== s.id);
+                            setSelectedSpecIds(newIds);
+                            if (newIds.length === 0 || selectedSpecIds[0] === s.id) {
+                              setSubjectId(""); setUnitId("");
+                            }
+                          } else {
+                            setSelectedSpecIds([...selectedSpecIds, s.id]);
+                          }
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-bold transition-all ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
+                        }`}
+                      >
+                        {isSelected ? <Check className="w-3.5 h-3.5" /> : null}
+                        {s.name}
+                        {selectedSpecIds[0] === s.id && selectedSpecIds.length > 1 && (
+                          <span className="text-[10px] bg-primary-foreground/20 px-1.5 py-0.5 rounded">الرئيسي</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedSpecIds.length > 1 && (
+                  <p className="text-xs text-secondary font-medium flex items-center gap-1">
+                    <Copy className="w-3 h-3" />
+                    سيتم نسخ الاختبار تلقائياً إلى {selectedSpecIds.length - 1} تخصص إضافي (نفس المادة والوحدة)
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-bold text-muted-foreground">المادة</label>
                 <select value={subjectId} onChange={e => { setSubjectId(e.target.value); setUnitId(""); }}
-                  disabled={!specId}
+                  disabled={selectedSpecIds.length === 0}
                   className="flex h-12 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
                   <option value="">اختر المادة...</option>
                   {filteredSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -459,10 +546,26 @@ export default function AdminExams() {
               </div>
 
               {/* Done button */}
-              <div className="flex gap-3 pt-2 border-t border-border">
-                <Button onClick={closeDialog} variant="outline" className="flex-1 h-11 rounded-xl font-bold">
-                  <CheckCircle2 className="w-4 h-4 ml-2 text-primary" />
-                  انتهيت من الاختبار
+              <div className="space-y-3 pt-2 border-t border-border">
+                {selectedSpecIds.length > 1 && (
+                  <div className="p-3 rounded-xl bg-secondary/10 text-secondary text-sm font-medium border border-secondary/20 flex items-center gap-2">
+                    <Copy className="w-4 h-4 shrink-0" />
+                    عند الانتهاء، سيتم نسخ الاختبار تلقائياً إلى {selectedSpecIds.length - 1} تخصص إضافي
+                  </div>
+                )}
+                <Button
+                  onClick={handleFinishExam}
+                  disabled={isDuplicating}
+                  className="w-full h-11 rounded-xl font-bold"
+                >
+                  {isDuplicating ? (
+                    <>جاري نسخ الاختبار إلى التخصصات الأخرى...</>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 ml-2" />
+                      {selectedSpecIds.length > 1 ? "إنهاء ونسخ الاختبار إلى التخصصات الأخرى" : "انتهيت من الاختبار"}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

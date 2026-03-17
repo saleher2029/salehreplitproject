@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, examsTable, questionsTable } from "@workspace/db";
-import { eq, count } from "drizzle-orm";
+import { db, examsTable, questionsTable, unitsTable, subjectsTable } from "@workspace/db";
+import { eq, count, and } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
 import { broadcastChange } from "../sse";
 import {
@@ -95,6 +95,102 @@ router.delete("/exams/:id", requireAdmin, async (req, res): Promise<void> => {
   await db.delete(examsTable).where(eq(examsTable.id, params.data.id));
   broadcastChange("exams");
   res.sendStatus(204);
+});
+
+router.post("/exams/:id/duplicate-to-specs", requireAdmin, async (req, res): Promise<void> => {
+  const examId = parseInt(req.params.id);
+  if (isNaN(examId)) { res.status(400).json({ error: "معرف الاختبار غير صالح" }); return; }
+
+  const { specializationIds } = req.body as { specializationIds?: number[] };
+  if (!specializationIds || !Array.isArray(specializationIds) || specializationIds.length === 0) {
+    res.status(400).json({ error: "يجب تحديد تخصص واحد على الأقل" });
+    return;
+  }
+
+  const uniqueSpecIds = [...new Set(specializationIds.filter(id => typeof id === "number" && id > 0))];
+  if (uniqueSpecIds.length === 0) {
+    res.status(400).json({ error: "معرفات التخصصات غير صالحة" });
+    return;
+  }
+
+  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
+  if (!exam) { res.status(404).json({ error: "الاختبار غير موجود" }); return; }
+
+  const questions = await db.select().from(questionsTable)
+    .where(eq(questionsTable.examId, examId))
+    .orderBy(questionsTable.orderIndex);
+
+  const [unit] = await db.select().from(unitsTable).where(eq(unitsTable.id, exam.unitId));
+  if (!unit) { res.status(404).json({ error: "الوحدة غير موجودة" }); return; }
+  const [subject] = await db.select().from(subjectsTable).where(eq(subjectsTable.id, unit.subjectId));
+  if (!subject) { res.status(404).json({ error: "المادة غير موجودة" }); return; }
+
+  const sourceSpecId = subject.specializationId;
+  const targetSpecIds = uniqueSpecIds.filter(id => id !== sourceSpecId);
+  if (targetSpecIds.length === 0) {
+    res.status(400).json({ error: "جميع التخصصات المحددة هي نفس تخصص الاختبار الأصلي" });
+    return;
+  }
+
+  const results: { specId: number; status: string; examId?: number }[] = [];
+  const subjectNameTrimmed = subject.name.trim();
+  const unitNameTrimmed = unit.name.trim();
+
+  for (const specId of targetSpecIds) {
+    try {
+      const allSubsInSpec = await db.select().from(subjectsTable)
+        .where(eq(subjectsTable.specializationId, specId));
+      const matchSubject = allSubsInSpec.find(s => s.name.trim() === subjectNameTrimmed);
+      if (!matchSubject) {
+        results.push({ specId, status: "لا توجد مادة بنفس الاسم في هذا التخصص" });
+        continue;
+      }
+      const allUnitsInSub = await db.select().from(unitsTable)
+        .where(eq(unitsTable.subjectId, matchSubject.id));
+      const matchUnit = allUnitsInSub.find(u => u.name.trim() === unitNameTrimmed);
+      if (!matchUnit) {
+        results.push({ specId, status: "لا توجد وحدة بنفس الاسم في هذا التخصص" });
+        continue;
+      }
+
+      const existingExams = await db.select().from(examsTable)
+        .where(and(eq(examsTable.unitId, matchUnit.id), eq(examsTable.title, exam.title)));
+      if (existingExams.length > 0) {
+        results.push({ specId, status: "يوجد اختبار بنفس الاسم في هذه الوحدة مسبقاً" });
+        continue;
+      }
+
+      const [newExam] = await db.insert(examsTable).values({
+        title: exam.title,
+        unitId: matchUnit.id,
+        timeLimit: exam.timeLimit,
+        questionLimit: exam.questionLimit,
+      }).returning();
+
+      if (questions.length > 0) {
+        await db.insert(questionsTable).values(
+          questions.map(q => ({
+            examId: newExam.id,
+            text: q.text,
+            imageUrl: q.imageUrl,
+            optionA: q.optionA,
+            optionB: q.optionB,
+            optionC: q.optionC,
+            optionD: q.optionD,
+            correctOption: q.correctOption,
+            orderIndex: q.orderIndex,
+          }))
+        );
+      }
+
+      results.push({ specId, status: "تم النسخ بنجاح", examId: newExam.id });
+    } catch (err) {
+      results.push({ specId, status: "حدث خطأ أثناء النسخ" });
+    }
+  }
+
+  broadcastChange("exams");
+  res.json({ results });
 });
 
 export default router;

@@ -43,6 +43,7 @@ A full Arabic Tawjihi (high school final exam) practice platform.
 - **Student notes**: textarea after exam for student feedback, stored in DB, visible to admin
 - **Admin "ملاحظات الطلبة" page**: `/admin/notes` shows all notes with difficulty stats, expandable cards
 - **Bookmarked questions section** in exam result page showing the student's starred questions
+- **Multi-specialization exam creation**: admin can select multiple specializations when creating an exam; the exam is automatically duplicated to matching subjects/units in other specializations via `POST /api/exams/:id/duplicate-to-specs`
 
 ### Admin Credentials
 - Username: `admin`
@@ -107,7 +108,7 @@ Expo React Native mobile app. Full Arabic RTL. Shares API with web frontend.
 - Theme: `ThemeContext` → `useAppTheme()` hook → `{ isDark, C }` colors
 - Colors: Primary `#10B77F`, Secondary `#E7AF08`, Background `#F5FAF8`
 - Auth routing: admin/supervisor → `/(admin)` group, student → `/(main)` group
-- Admin screens: `(admin)/index.tsx` (dashboard), `(admin)/content.tsx` (hierarchical CRUD), `(admin)/profile.tsx`
+- Admin screens: `(admin)/index.tsx` (dashboard), `(admin)/content.tsx` (hierarchical CRUD), `(admin)/users.tsx` (user management, admin-only), `(admin)/profile.tsx`
 - Content management: Specs → Subjects → Units → Exams → Questions with breadcrumb navigation
 
 ### `lib/db` (`@workspace/db`)
