@@ -132,22 +132,28 @@ router.post("/exams/:id/duplicate-to-specs", requireAdmin, async (req, res): Pro
     return;
   }
 
+  const normalizeName = (name: string) =>
+    name.trim().replace(/\s+/g, " ")
+      .replace(/آ/g, "ا").replace(/أ/g, "ا").replace(/إ/g, "ا").replace(/ٱ/g, "ا")
+      .replace(/ة/g, "ه").replace(/ى/g, "ي")
+      .replace(/َ|ُ|ِ|ّ|ْ|ٌ|ً|ٍ/g, "");
+
   const results: { specId: number; status: string; examId?: number }[] = [];
-  const subjectNameTrimmed = subject.name.trim();
-  const unitNameTrimmed = unit.name.trim();
+  const subjectNameNorm = normalizeName(subject.name);
+  const unitNameNorm = normalizeName(unit.name);
 
   for (const specId of targetSpecIds) {
     try {
       const allSubsInSpec = await db.select().from(subjectsTable)
         .where(eq(subjectsTable.specializationId, specId));
-      const matchSubject = allSubsInSpec.find(s => s.name.trim() === subjectNameTrimmed);
+      const matchSubject = allSubsInSpec.find(s => normalizeName(s.name) === subjectNameNorm);
       if (!matchSubject) {
         results.push({ specId, status: "لا توجد مادة بنفس الاسم في هذا التخصص" });
         continue;
       }
       const allUnitsInSub = await db.select().from(unitsTable)
         .where(eq(unitsTable.subjectId, matchSubject.id));
-      const matchUnit = allUnitsInSub.find(u => u.name.trim() === unitNameTrimmed);
+      const matchUnit = allUnitsInSub.find(u => normalizeName(u.name) === unitNameNorm);
       if (!matchUnit) {
         results.push({ specId, status: "لا توجد وحدة بنفس الاسم في هذا التخصص" });
         continue;

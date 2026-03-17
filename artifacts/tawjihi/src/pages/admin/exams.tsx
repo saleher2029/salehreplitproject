@@ -70,15 +70,19 @@ export default function AdminExams() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const primarySpecId = selectedSpecIds.length > 0 ? selectedSpecIds[0] : null;
+  const normName = (n: string) =>
+    n.trim().replace(/\s+/g, " ")
+      .replace(/آ|أ|إ|ٱ/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
+      .replace(/َ|ُ|ِ|ّ|ْ|ٌ|ً|ٍ/g, "");
   const filteredSubjects = (() => {
     if (!allSubjects || !primarySpecId) return [];
     const primarySubs = allSubjects.filter(s => s.specializationId === primarySpecId);
     if (selectedSpecIds.length <= 1) return primarySubs;
     const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
     return primarySubs.filter(ps => {
-      const nameNorm = ps.name.trim();
+      const nn = normName(ps.name);
       return otherSpecIds.every(specId =>
-        allSubjects.some(s => s.specializationId === specId && s.name.trim() === nameNorm)
+        allSubjects.some(s => s.specializationId === specId && normName(s.name) === nn)
       );
     });
   })();
@@ -143,15 +147,15 @@ export default function AdminExams() {
     const subject = allSubjects.find(s => s.id === unit.subjectId);
     if (!subject) return [];
     const examSpecId = subject.specializationId;
-    const subjectName = subject.name.trim();
-    const unitName = unit.name.trim();
+    const subjectNN = normName(subject.name);
+    const unitNN = normName(unit.name);
     return specializations.filter(spec => {
       if (spec.id === examSpecId) return false;
-      const matchingSubs = allSubjects.filter(s => s.specializationId === spec.id && s.name.trim() === subjectName);
+      const matchingSubs = allSubjects.filter(s => s.specializationId === spec.id && normName(s.name) === subjectNN);
       if (matchingSubs.length === 0) return false;
-      const matchingUnits = matchingSubs.flatMap(ms => allUnits!.filter(u => u.subjectId === ms.id && u.name.trim() === unitName));
+      const matchingUnits = matchingSubs.flatMap(ms => allUnits!.filter(u => u.subjectId === ms.id && normName(u.name) === unitNN));
       if (matchingUnits.length === 0) return false;
-      const alreadyExists = matchingUnits.some(mu => exams!.some(e => e.unitId === mu.id && e.title.trim() === exam.title.trim()));
+      const alreadyExists = matchingUnits.some(mu => exams!.some(e => e.unitId === mu.id && normName(e.title) === normName(exam.title)));
       return !alreadyExists;
     });
   };
