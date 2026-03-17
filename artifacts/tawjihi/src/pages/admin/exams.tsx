@@ -70,8 +70,33 @@ export default function AdminExams() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const primarySpecId = selectedSpecIds.length > 0 ? selectedSpecIds[0] : null;
-  const filteredSubjects = allSubjects?.filter(s => !primarySpecId || s.specializationId === primarySpecId) ?? [];
-  const filteredUnits = allUnits?.filter(u => !subjectId || u.subjectId === parseInt(subjectId)) ?? [];
+  const filteredSubjects = (() => {
+    if (!allSubjects || !primarySpecId) return [];
+    const primarySubs = allSubjects.filter(s => s.specializationId === primarySpecId);
+    if (selectedSpecIds.length <= 1) return primarySubs;
+    const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
+    return primarySubs.filter(ps => {
+      const nameNorm = ps.name.trim();
+      return otherSpecIds.every(specId =>
+        allSubjects.some(s => s.specializationId === specId && s.name.trim() === nameNorm)
+      );
+    });
+  })();
+  const filteredUnits = (() => {
+    if (!allUnits || !subjectId) return [];
+    const primaryUnits = allUnits.filter(u => u.subjectId === parseInt(subjectId));
+    if (selectedSpecIds.length <= 1 || !allSubjects) return primaryUnits;
+    const selectedSubject = allSubjects.find(s => s.id === parseInt(subjectId));
+    if (!selectedSubject) return primaryUnits;
+    const subjectNameNorm = selectedSubject.name.trim();
+    const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
+    return primaryUnits.filter(pu => {
+      return otherSpecIds.every(specId => {
+        const specSubIds = allSubjects.filter(s => s.specializationId === specId && s.name.trim() === subjectNameNorm).map(s => s.id);
+        return allUnits.some(u => specSubIds.includes(u.subjectId) && u.name.trim() === pu.name.trim());
+      });
+    });
+  })();
 
   // Fetch questions for active exam
   const { data: activeExam, refetch: refetchExam } = useQuery({
@@ -316,7 +341,7 @@ export default function AdminExams() {
             <div className="space-y-5 py-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-muted-foreground">التخصصات</label>
-                <p className="text-xs text-muted-foreground">اختر تخصصاً أو أكثر — التخصص الأول يحدد المادة والوحدة، والباقي يتم نسخ الاختبار إليها تلقائياً</p>
+                <p className="text-xs text-muted-foreground">اختر تخصصاً أو أكثر — عند اختيار عدة تخصصات تظهر فقط المواد المشتركة بينها</p>
                 <div className="flex flex-wrap gap-2 p-3 border border-input rounded-xl bg-background">
                   {specializations?.map(s => {
                     const isSelected = selectedSpecIds.includes(s.id);
@@ -328,12 +353,10 @@ export default function AdminExams() {
                           if (isSelected) {
                             const newIds = selectedSpecIds.filter(id => id !== s.id);
                             setSelectedSpecIds(newIds);
-                            if (newIds.length === 0 || selectedSpecIds[0] === s.id) {
-                              setSubjectId(""); setUnitId("");
-                            }
                           } else {
                             setSelectedSpecIds([...selectedSpecIds, s.id]);
                           }
+                          setSubjectId(""); setUnitId("");
                         }}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-bold transition-all ${
                           isSelected
