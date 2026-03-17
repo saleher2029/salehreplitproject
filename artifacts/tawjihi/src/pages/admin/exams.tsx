@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, Edit2, Trash2, Clock, BookOpen, ChevronRight,
-  ImagePlus, X, CheckCircle, CheckCircle2, ArrowLeft, Copy, Check,
+  ImagePlus, X, CheckCircle, CheckCircle2, ArrowLeft, Copy, Check, Share2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -144,6 +144,69 @@ export default function AdminExams() {
   };
 
   const [isDuplicating, setIsDuplicating] = useState(false);
+
+  const [publishExam, setPublishExam] = useState<any>(null);
+  const [publishSpecIds, setPublishSpecIds] = useState<number[]>([]);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<string | null>(null);
+
+  const getPublishableSpecs = (exam: any) => {
+    if (!exam || !allUnits || !allSubjects || !specializations || !exams) return [];
+    const unit = allUnits.find(u => u.id === exam.unitId);
+    if (!unit) return [];
+    const subject = allSubjects.find(s => s.id === unit.subjectId);
+    if (!subject) return [];
+    const examSpecId = subject.specializationId;
+    const subjectName = subject.name.trim();
+    const unitName = unit.name.trim();
+    return specializations.filter(spec => {
+      if (spec.id === examSpecId) return false;
+      const matchingSubs = allSubjects.filter(s => s.specializationId === spec.id && s.name.trim() === subjectName);
+      if (matchingSubs.length === 0) return false;
+      const matchingUnits = matchingSubs.flatMap(ms => allUnits!.filter(u => u.subjectId === ms.id && u.name.trim() === unitName));
+      if (matchingUnits.length === 0) return false;
+      const alreadyExists = matchingUnits.some(mu => exams!.some(e => e.unitId === mu.id && e.title.trim() === exam.title.trim()));
+      return !alreadyExists;
+    });
+  };
+
+  const openPublishDialog = (exam: any) => {
+    setPublishExam(exam);
+    setPublishSpecIds([]);
+    setPublishResult(null);
+  };
+
+  const handlePublish = async () => {
+    if (!publishExam || publishSpecIds.length === 0) return;
+    setIsPublishing(true);
+    setPublishResult(null);
+    try {
+      const res = await fetch(`/api/exams/${publishExam.id}/duplicate-to-specs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ specializationIds: publishSpecIds }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل النشر");
+      const successCount = data.results?.filter((r: any) => r.examId).length ?? 0;
+      const failedResults = data.results?.filter((r: any) => !r.examId) ?? [];
+      let msg = `✓ تم نشر الاختبار في ${successCount} تخصص بنجاح`;
+      if (failedResults.length > 0) {
+        const specNames = failedResults.map((r: any) => {
+          const spec = specializations?.find(s => s.id === r.specId);
+          return `${spec?.name || r.specId}: ${r.status}`;
+        });
+        msg += ` | ⚠ ${specNames.join("، ")}`;
+      }
+      setPublishResult(msg);
+      queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+      setPublishSpecIds([]);
+    } catch (e: any) {
+      setPublishResult(`⚠ ${e.message}`);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   const handleFinishExam = async () => {
     if (activeExamId && selectedSpecIds.length > 1 && primarySpecId) {
@@ -663,6 +726,12 @@ export default function AdminExams() {
                       className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
+                    {getPublishableSpecs(item).length > 0 && (
+                      <Button variant="ghost" size="sm" onClick={() => openPublishDialog(item)}
+                        className="h-8 px-2 text-xs font-bold text-green-600 hover:bg-green-50 rounded-lg" title="نشر في تخصصات أخرى">
+                        <Share2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -671,6 +740,100 @@ export default function AdminExams() {
         </table>
         </div>
       </div>
+
+      <Dialog open={!!publishExam} onOpenChange={(open) => { if (!open) setPublishExam(null); }}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-extrabold">نشر الاختبار في تخصصات أخرى</DialogTitle>
+          </DialogHeader>
+          {publishExam && (() => {
+            const availableSpecs = getPublishableSpecs(publishExam);
+            return (
+              <div className="space-y-4 py-2">
+                <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-sm font-bold">{publishExam.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {allUnits?.find(u => u.id === publishExam.unitId)?.name ?? ""}
+                  </p>
+                </div>
+
+                {availableSpecs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">لا توجد تخصصات أخرى متاحة للنشر</p>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-muted-foreground">اختر التخصصات للنشر فيها</label>
+                      <div className="flex flex-wrap gap-2">
+                        {availableSpecs.map(spec => {
+                          const isSelected = publishSpecIds.includes(spec.id);
+                          return (
+                            <button
+                              key={spec.id}
+                              type="button"
+                              onClick={() => {
+                                setPublishSpecIds(prev =>
+                                  isSelected ? prev.filter(id => id !== spec.id) : [...prev, spec.id]
+                                );
+                              }}
+                              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-bold transition-all ${
+                                isSelected
+                                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                  : "bg-background text-muted-foreground border-border hover:border-primary hover:text-primary"
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3.5 h-3.5" />}
+                              {spec.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {availableSpecs.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setPublishSpecIds(
+                            publishSpecIds.length === availableSpecs.length ? [] : availableSpecs.map(s => s.id)
+                          )}
+                          className="text-xs text-primary font-bold hover:underline"
+                        >
+                          {publishSpecIds.length === availableSpecs.length ? "إلغاء تحديد الكل" : "تحديد الكل"}
+                        </button>
+                      )}
+                    </div>
+
+                    <Button
+                      onClick={handlePublish}
+                      disabled={publishSpecIds.length === 0 || isPublishing}
+                      className="w-full h-11 rounded-xl font-bold"
+                    >
+                      {isPublishing ? (
+                        <span className="flex items-center gap-2">
+                          <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                          جاري النشر...
+                        </span>
+                      ) : (
+                        <>
+                          <Share2 className="w-4 h-4 ml-2" />
+                          نشر في {publishSpecIds.length || "..."} تخصص
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+
+                {publishResult && (
+                  <div className={`p-3 rounded-xl text-sm font-medium border ${
+                    publishResult.startsWith("✓")
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : "bg-destructive/10 text-destructive border-destructive/20"
+                  }`}>
+                    {publishResult}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
