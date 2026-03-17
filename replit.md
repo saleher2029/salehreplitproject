@@ -55,7 +55,8 @@ A full Arabic Tawjihi (high school final exam) practice platform.
 artifacts-monorepo/
 ├── artifacts/              # Deployable applications
 │   ├── api-server/         # Express API server
-│   └── tawjihi/            # React + Vite frontend (Arabic RTL)
+│   ├── tawjihi/            # React + Vite frontend (Arabic RTL)
+│   └── tawjihi-mobile/     # Expo React Native mobile app (Arabic RTL)
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
@@ -100,8 +101,24 @@ Express 5 API server. Routes in `src/routes/`, auth middleware in `src/lib/auth.
 
 React + Vite frontend. Full Arabic RTL. Pages: login, specializations, subjects, units, exams, take-exam, exam-result, my-exams, admin dashboard.
 
+### `artifacts/tawjihi-mobile` (`@workspace/tawjihi-mobile`)
+
+Expo React Native mobile app. Full Arabic RTL. Shares API with web frontend.
+- Theme: `ThemeContext` → `useAppTheme()` hook → `{ isDark, C }` colors
+- Colors: Primary `#10B77F`, Secondary `#E7AF08`, Background `#F5FAF8`
+- Auth routing: admin/supervisor → `/(admin)` group, student → `/(main)` group
+- Admin screens: `(admin)/index.tsx` (dashboard), `(admin)/content.tsx` (hierarchical CRUD), `(admin)/profile.tsx`
+- Content management: Specs → Subjects → Units → Exams → Questions with breadcrumb navigation
+
 ### `lib/db` (`@workspace/db`)
 
 Database layer using Drizzle ORM with PostgreSQL.
 
 Run migrations: `pnpm --filter @workspace/db run push`
+
+## Real-Time Sync
+
+- **SSE (Server-Sent Events)**: API server broadcasts change events after mutations
+- **Web**: `use-server-events.ts` uses native `EventSource`, invalidates React Query caches
+- **Mobile**: `fetch()+ReadableStream` with reconnect-on-disconnect
+- SSE endpoint: `GET /api/events` (text/event-stream)

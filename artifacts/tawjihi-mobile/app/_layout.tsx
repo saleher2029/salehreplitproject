@@ -36,6 +36,8 @@ function RootLayoutNav() {
     if (!isLoading) {
       if (!user) {
         router.replace("/login");
+      } else if (user.role === "admin" || user.role === "supervisor") {
+        router.replace("/(admin)");
       } else {
         router.replace("/(main)");
       }
@@ -56,6 +58,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />
       <Stack.Screen name="(main)" />
+      <Stack.Screen name="(admin)" />
       <Stack.Screen name="subjects" />
       <Stack.Screen name="units" />
       <Stack.Screen name="exams" />
