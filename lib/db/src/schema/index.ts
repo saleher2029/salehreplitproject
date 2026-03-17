@@ -3,6 +3,7 @@ export * from "./specializations";
 export * from "./subjects";
 export * from "./units";
 export * from "./exams";
+export * from "./exam-target-units";
 export * from "./questions";
 export * from "./results";
 export * from "./settings";

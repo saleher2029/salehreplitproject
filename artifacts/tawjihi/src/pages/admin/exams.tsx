@@ -38,6 +38,15 @@ export default function AdminExams() {
   const { data: allSubjects } = useGetSubjects({}, opts);
   const { data: allUnits } = useGetUnits({}, opts);
 
+  const { data: examTargetLinks } = useQuery({
+    queryKey: ["exam-target-links"],
+    queryFn: async () => {
+      const res = await fetch("/api/exam-target-units", { headers });
+      if (!res.ok) return {} as Record<number, number[]>;
+      return res.json() as Promise<Record<number, number[]>>;
+    },
+  });
+
   const createExamMut = useCreateExam(opts);
   const updateExamMut = useUpdateExam(opts);
   const deleteExamMut = useDeleteExam(opts);
@@ -140,8 +149,31 @@ export default function AdminExams() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<string | null>(null);
 
+  const getExamSpecNames = (exam: any): string[] => {
+    if (!exam || !allUnits || !allSubjects || !specializations) return [];
+    const specNames: string[] = [];
+    const unit = allUnits.find(u => u.id === exam.unitId);
+    if (unit) {
+      const subject = allSubjects.find(s => s.id === unit.subjectId);
+      if (subject) {
+        const spec = specializations.find(sp => sp.id === subject.specializationId);
+        if (spec) specNames.push(spec.name);
+      }
+    }
+    const linkedUnitIds = examTargetLinks?.[exam.id] ?? [];
+    for (const linkedUnitId of linkedUnitIds) {
+      const linkedUnit = allUnits.find(u => u.id === linkedUnitId);
+      if (!linkedUnit) continue;
+      const linkedSub = allSubjects.find(s => s.id === linkedUnit.subjectId);
+      if (!linkedSub) continue;
+      const linkedSpec = specializations.find(sp => sp.id === linkedSub.specializationId);
+      if (linkedSpec && !specNames.includes(linkedSpec.name)) specNames.push(linkedSpec.name);
+    }
+    return specNames;
+  };
+
   const getPublishableSpecs = (exam: any) => {
-    if (!exam || !allUnits || !allSubjects || !specializations || !exams) return [];
+    if (!exam || !allUnits || !allSubjects || !specializations) return [];
     const unit = allUnits.find(u => u.id === exam.unitId);
     if (!unit) return [];
     const subject = allSubjects.find(s => s.id === unit.subjectId);
@@ -149,14 +181,15 @@ export default function AdminExams() {
     const examSpecId = subject.specializationId;
     const subjectNN = normName(subject.name);
     const unitNN = normName(unit.name);
+    const linkedUnitIds = new Set(examTargetLinks?.[exam.id] ?? []);
     return specializations.filter(spec => {
       if (spec.id === examSpecId) return false;
       const matchingSubs = allSubjects.filter(s => s.specializationId === spec.id && normName(s.name) === subjectNN);
       if (matchingSubs.length === 0) return false;
       const matchingUnits = matchingSubs.flatMap(ms => allUnits!.filter(u => u.subjectId === ms.id && normName(u.name) === unitNN));
       if (matchingUnits.length === 0) return false;
-      const alreadyExists = matchingUnits.some(mu => exams!.some(e => e.unitId === mu.id && normName(e.title) === normName(exam.title)));
-      return !alreadyExists;
+      const alreadyLinked = matchingUnits.some(mu => linkedUnitIds.has(mu.id));
+      return !alreadyLinked;
     });
   };
 
@@ -171,16 +204,16 @@ export default function AdminExams() {
     setIsPublishing(true);
     setPublishResult(null);
     try {
-      const res = await fetch(`/api/exams/${publishExam.id}/duplicate-to-specs`, {
+      const res = await fetch(`/api/exams/${publishExam.id}/link-to-specs`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ specializationIds: publishSpecIds }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "فشل النشر");
-      const successCount = data.results?.filter((r: any) => r.examId).length ?? 0;
-      const failedResults = data.results?.filter((r: any) => !r.examId) ?? [];
-      let msg = `✓ تم نشر الاختبار في ${successCount} تخصص بنجاح`;
+      const successCount = data.results?.filter((r: any) => r.unitId).length ?? 0;
+      const failedResults = data.results?.filter((r: any) => !r.unitId) ?? [];
+      let msg = `✓ تم ربط الاختبار بـ ${successCount} تخصص بنجاح`;
       if (failedResults.length > 0) {
         const specNames = failedResults.map((r: any) => {
           const spec = specializations?.find(s => s.id === r.specId);
@@ -190,6 +223,7 @@ export default function AdminExams() {
       }
       setPublishResult(msg);
       queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+      queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
       setPublishSpecIds([]);
     } catch (e: any) {
       setPublishResult(`⚠ ${e.message}`);
@@ -203,22 +237,22 @@ export default function AdminExams() {
       const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
       setIsDuplicating(true);
       try {
-        const res = await fetch(`/api/exams/${activeExamId}/duplicate-to-specs`, {
+        const res = await fetch(`/api/exams/${activeExamId}/link-to-specs`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify({ specializationIds: otherSpecIds }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "فشل النسخ");
-        const successCount = data.results?.filter((r: any) => r.examId).length ?? 0;
-        const failedResults = data.results?.filter((r: any) => !r.examId) ?? [];
-        let msg = `✓ تم نسخ الاختبار إلى ${successCount} تخصص بنجاح`;
+        if (!res.ok) throw new Error(data.error || "فشل الربط");
+        const successCount = data.results?.filter((r: any) => r.unitId).length ?? 0;
+        const failedResults = data.results?.filter((r: any) => !r.unitId) ?? [];
+        let msg = `✓ تم ربط الاختبار بـ ${successCount} تخصص بنجاح`;
         if (failedResults.length > 0) {
           const specNames = failedResults.map((r: any) => {
             const spec = specializations?.find(s => s.id === r.specId);
             return `${spec?.name || r.specId}: ${r.status}`;
           });
-          msg += `\n⚠ تعذر النسخ: ${specNames.join("، ")}`;
+          msg += `\n⚠ تعذر الربط: ${specNames.join("، ")}`;
         }
         setDuplicateStatus(msg);
       } catch (e: any) {
@@ -231,6 +265,7 @@ export default function AdminExams() {
     setActiveExamId(null);
     setEditingExamId(null);
     queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+    queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
   };
 
   const closeDialog = () => {
@@ -239,6 +274,7 @@ export default function AdminExams() {
     setEditingExamId(null);
     setDuplicateStatus(null);
     queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+    queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
   };
 
   // ─── Save exam (create or edit) ─────────────────────────────────────────────
@@ -429,7 +465,7 @@ export default function AdminExams() {
                 {selectedSpecIds.length > 1 && (
                   <p className="text-xs text-secondary font-medium flex items-center gap-1">
                     <Copy className="w-3 h-3" />
-                    سيتم نسخ الاختبار تلقائياً إلى {selectedSpecIds.length - 1} تخصص إضافي (نفس المادة والوحدة)
+                    سيتم ربط الاختبار بـ {selectedSpecIds.length - 1} تخصص إضافي (نفس المادة والوحدة)
                   </p>
                 )}
               </div>
@@ -626,7 +662,7 @@ export default function AdminExams() {
                 {selectedSpecIds.length > 1 && (
                   <div className="p-3 rounded-xl bg-secondary/10 text-secondary text-sm font-medium border border-secondary/20 flex items-center gap-2">
                     <Copy className="w-4 h-4 shrink-0" />
-                    عند الانتهاء، سيتم نسخ الاختبار تلقائياً إلى {selectedSpecIds.length - 1} تخصص إضافي
+                    عند الانتهاء، سيتم ربط الاختبار بـ {selectedSpecIds.length - 1} تخصص إضافي
                   </div>
                 )}
                 <Button
@@ -635,11 +671,11 @@ export default function AdminExams() {
                   className="w-full h-11 rounded-xl font-bold"
                 >
                   {isDuplicating ? (
-                    <>جاري نسخ الاختبار إلى التخصصات الأخرى...</>
+                    <>جاري ربط الاختبار بالتخصصات الأخرى...</>
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4 ml-2" />
-                      {selectedSpecIds.length > 1 ? "إنهاء ونسخ الاختبار إلى التخصصات الأخرى" : "انتهيت من الاختبار"}
+                      {selectedSpecIds.length > 1 ? "إنهاء وربط الاختبار بالتخصصات الأخرى" : "انتهيت من الاختبار"}
                     </>
                   )}
                 </Button>
@@ -658,6 +694,7 @@ export default function AdminExams() {
               <th className="px-6 py-4 border-b">#</th>
               <th className="px-6 py-4 border-b">الاختبار</th>
               <th className="px-6 py-4 border-b">الوحدة</th>
+              <th className="px-6 py-4 border-b">التخصصات</th>
               <th className="px-6 py-4 border-b text-center">الوقت</th>
               <th className="px-6 py-4 border-b text-center">الأسئلة</th>
               <th className="px-6 py-4 border-b text-center">العشوائي</th>
@@ -666,10 +703,10 @@ export default function AdminExams() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
+              <tr><td colSpan={8} className="px-6 py-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
             ) : exams?.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-16 text-center">
+                <td colSpan={8} className="px-6 py-16 text-center">
                   <div className="space-y-3">
                     <BookOpen className="w-10 h-10 text-muted-foreground mx-auto" />
                     <p className="font-bold text-muted-foreground">لا توجد اختبارات بعد</p>
@@ -682,6 +719,15 @@ export default function AdminExams() {
                 <td className="px-6 py-4 font-mono text-muted-foreground text-xs">{item.id}</td>
                 <td className="px-6 py-4 font-bold">{item.title}</td>
                 <td className="px-6 py-4 text-muted-foreground text-sm">{allUnits?.find(u => u.id === item.unitId)?.name ?? "—"}</td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-wrap gap-1">
+                    {getExamSpecNames(item).map((sn, i) => (
+                      <span key={i} className="inline-block bg-primary/10 text-primary text-[11px] font-bold px-2 py-0.5 rounded-full">
+                        {sn}
+                      </span>
+                    ))}
+                  </div>
+                </td>
                 <td className="px-6 py-4 text-center">
                   {item.timeLimit ? (
                     <span className="inline-flex items-center gap-1 text-secondary font-bold text-sm">

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, examsTable, questionsTable, unitsTable, subjectsTable } from "@workspace/db";
-import { eq, count, and } from "drizzle-orm";
+import { db, examsTable, questionsTable, unitsTable, subjectsTable, examTargetUnitsTable } from "@workspace/db";
+import { eq, count, and, inArray } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
 import { broadcastChange } from "../sse";
 import {
@@ -21,9 +21,21 @@ router.get("/exams", async (req, res): Promise<void> => {
   const queryParsed = GetExamsQueryParams.safeParse(req.query);
   let exams;
   if (queryParsed.success && queryParsed.data.unitId) {
-    exams = await db.select().from(examsTable)
-      .where(eq(examsTable.unitId, queryParsed.data.unitId))
+    const unitId = queryParsed.data.unitId;
+    const directExams = await db.select().from(examsTable)
+      .where(eq(examsTable.unitId, unitId))
       .orderBy(examsTable.id);
+    const linkedRows = await db.select({ examId: examTargetUnitsTable.examId })
+      .from(examTargetUnitsTable)
+      .where(eq(examTargetUnitsTable.unitId, unitId));
+    const linkedExamIds = linkedRows.map(r => r.examId).filter(id => !directExams.some(e => e.id === id));
+    let linkedExams: typeof directExams = [];
+    if (linkedExamIds.length > 0) {
+      linkedExams = await db.select().from(examsTable)
+        .where(inArray(examsTable.id, linkedExamIds))
+        .orderBy(examsTable.id);
+    }
+    exams = [...directExams, ...linkedExams];
   } else {
     exams = await db.select().from(examsTable).orderBy(examsTable.id);
   }
@@ -97,7 +109,31 @@ router.delete("/exams/:id", requireAdmin, async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-router.post("/exams/:id/duplicate-to-specs", requireAdmin, async (req, res): Promise<void> => {
+router.get("/exam-target-units", requireAdmin, async (req, res): Promise<void> => {
+  const allLinks = await db.select().from(examTargetUnitsTable);
+  const grouped: Record<number, number[]> = {};
+  for (const link of allLinks) {
+    if (!grouped[link.examId]) grouped[link.examId] = [];
+    grouped[link.examId].push(link.unitId);
+  }
+  res.json(grouped);
+});
+
+router.get("/exams/:id/target-units", requireAdmin, async (req, res): Promise<void> => {
+  const examId = parseInt(req.params.id);
+  if (isNaN(examId)) { res.status(400).json({ error: "معرف الاختبار غير صالح" }); return; }
+  const links = await db.select().from(examTargetUnitsTable)
+    .where(eq(examTargetUnitsTable.examId, examId));
+  res.json(links.map(l => l.unitId));
+});
+
+const normalizeName = (name: string) =>
+  name.trim().replace(/\s+/g, " ")
+    .replace(/آ/g, "ا").replace(/أ/g, "ا").replace(/إ/g, "ا").replace(/ٱ/g, "ا")
+    .replace(/ة/g, "ه").replace(/ى/g, "ي")
+    .replace(/َ|ُ|ِ|ّ|ْ|ٌ|ً|ٍ/g, "");
+
+router.post("/exams/:id/link-to-specs", requireAdmin, async (req, res): Promise<void> => {
   const examId = parseInt(req.params.id);
   if (isNaN(examId)) { res.status(400).json({ error: "معرف الاختبار غير صالح" }); return; }
 
@@ -116,10 +152,6 @@ router.post("/exams/:id/duplicate-to-specs", requireAdmin, async (req, res): Pro
   const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
   if (!exam) { res.status(404).json({ error: "الاختبار غير موجود" }); return; }
 
-  const questions = await db.select().from(questionsTable)
-    .where(eq(questionsTable.examId, examId))
-    .orderBy(questionsTable.orderIndex);
-
   const [unit] = await db.select().from(unitsTable).where(eq(unitsTable.id, exam.unitId));
   if (!unit) { res.status(404).json({ error: "الوحدة غير موجودة" }); return; }
   const [subject] = await db.select().from(subjectsTable).where(eq(subjectsTable.id, unit.subjectId));
@@ -132,15 +164,14 @@ router.post("/exams/:id/duplicate-to-specs", requireAdmin, async (req, res): Pro
     return;
   }
 
-  const normalizeName = (name: string) =>
-    name.trim().replace(/\s+/g, " ")
-      .replace(/آ/g, "ا").replace(/أ/g, "ا").replace(/إ/g, "ا").replace(/ٱ/g, "ا")
-      .replace(/ة/g, "ه").replace(/ى/g, "ي")
-      .replace(/َ|ُ|ِ|ّ|ْ|ٌ|ً|ٍ/g, "");
-
-  const results: { specId: number; status: string; examId?: number }[] = [];
   const subjectNameNorm = normalizeName(subject.name);
   const unitNameNorm = normalizeName(unit.name);
+
+  const existingLinks = await db.select().from(examTargetUnitsTable)
+    .where(eq(examTargetUnitsTable.examId, examId));
+  const alreadyLinkedUnitIds = new Set(existingLinks.map(l => l.unitId));
+
+  const results: { specId: number; status: string; unitId?: number }[] = [];
 
   for (const specId of targetSpecIds) {
     try {
@@ -159,44 +190,37 @@ router.post("/exams/:id/duplicate-to-specs", requireAdmin, async (req, res): Pro
         continue;
       }
 
-      const existingExams = await db.select().from(examsTable)
-        .where(and(eq(examsTable.unitId, matchUnit.id), eq(examsTable.title, exam.title)));
-      if (existingExams.length > 0) {
-        results.push({ specId, status: "يوجد اختبار بنفس الاسم في هذه الوحدة مسبقاً" });
+      if (alreadyLinkedUnitIds.has(matchUnit.id)) {
+        results.push({ specId, status: "الاختبار مرتبط بهذا التخصص مسبقاً" });
         continue;
       }
 
-      const [newExam] = await db.insert(examsTable).values({
-        title: exam.title,
+      await db.insert(examTargetUnitsTable).values({
+        examId: examId,
         unitId: matchUnit.id,
-        timeLimit: exam.timeLimit,
-        questionLimit: exam.questionLimit,
-      }).returning();
+      });
 
-      if (questions.length > 0) {
-        await db.insert(questionsTable).values(
-          questions.map(q => ({
-            examId: newExam.id,
-            text: q.text,
-            imageUrl: q.imageUrl,
-            optionA: q.optionA,
-            optionB: q.optionB,
-            optionC: q.optionC,
-            optionD: q.optionD,
-            correctOption: q.correctOption,
-            orderIndex: q.orderIndex,
-          }))
-        );
-      }
-
-      results.push({ specId, status: "تم النسخ بنجاح", examId: newExam.id });
+      results.push({ specId, status: "تم الربط بنجاح", unitId: matchUnit.id });
     } catch (err) {
-      results.push({ specId, status: "حدث خطأ أثناء النسخ" });
+      results.push({ specId, status: "حدث خطأ أثناء الربط" });
     }
   }
 
   broadcastChange("exams");
   res.json({ results });
+});
+
+router.post("/exams/:id/unlink-unit", requireAdmin, async (req, res): Promise<void> => {
+  const examId = parseInt(req.params.id);
+  const { unitId } = req.body as { unitId?: number };
+  if (isNaN(examId) || !unitId) {
+    res.status(400).json({ error: "معرفات غير صالحة" });
+    return;
+  }
+  await db.delete(examTargetUnitsTable)
+    .where(and(eq(examTargetUnitsTable.examId, examId), eq(examTargetUnitsTable.unitId, unitId)));
+  broadcastChange("exams");
+  res.sendStatus(204);
 });
 
 export default router;

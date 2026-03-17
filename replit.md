@@ -43,7 +43,7 @@ A full Arabic Tawjihi (high school final exam) practice platform.
 - **Student notes**: textarea after exam for student feedback, stored in DB, visible to admin
 - **Admin "ملاحظات الطلبة" page**: `/admin/notes` shows all notes with difficulty stats, expandable cards
 - **Bookmarked questions section** in exam result page showing the student's starred questions
-- **Multi-specialization exam creation**: admin can select multiple specializations when creating an exam; the exam is automatically duplicated to matching subjects/units in other specializations via `POST /api/exams/:id/duplicate-to-specs`
+- **Multi-specialization exam linking**: admin selects multiple specializations when creating an exam; the exam is linked (not duplicated) to matching units in other specs via `POST /api/exams/:id/link-to-specs`. One exam record serves all linked specs via `exam_target_units` junction table. Students see the exam under each linked unit.
 
 ### Admin Credentials
 - Username: `admin`
@@ -76,7 +76,8 @@ artifacts-monorepo/
 - `specializations` - التخصصات (علمي, أدبي, etc.)
 - `subjects` - المواد (linked to specialization)
 - `units` - الوحدات (linked to subject)
-- `exams` - الاختبارات (linked to unit)
+- `exams` - الاختبارات (linked to primary unit)
+- `exam_target_units` - ربط الاختبار بوحدات إضافية في تخصصات أخرى (many-to-many)
 - `questions` - الأسئلة (linked to exam, 4 options A/B/C/D)
 - `exam_results` - نتائج الاختبارات (user exam scores)
 - `answer_details` - تفاصيل الإجابات (per-question correctness)
