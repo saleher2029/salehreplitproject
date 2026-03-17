@@ -19,6 +19,7 @@ export function OnboardingModal() {
   const [error, setError] = useState("");
 
   if (!user) return null;
+  if (user.role === "admin" || user.role === "supervisor") return null;
 
   const storageKey = `tawjihi_welcomed_${user.id}`;
   const alreadyWelcomed = safeGet(storageKey) === "done";
