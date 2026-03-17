@@ -82,21 +82,7 @@ export default function AdminExams() {
       );
     });
   })();
-  const filteredUnits = (() => {
-    if (!allUnits || !subjectId) return [];
-    const primaryUnits = allUnits.filter(u => u.subjectId === parseInt(subjectId));
-    if (selectedSpecIds.length <= 1 || !allSubjects) return primaryUnits;
-    const selectedSubject = allSubjects.find(s => s.id === parseInt(subjectId));
-    if (!selectedSubject) return primaryUnits;
-    const subjectNameNorm = selectedSubject.name.trim();
-    const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
-    return primaryUnits.filter(pu => {
-      return otherSpecIds.every(specId => {
-        const specSubIds = allSubjects.filter(s => s.specializationId === specId && s.name.trim() === subjectNameNorm).map(s => s.id);
-        return allUnits.some(u => specSubIds.includes(u.subjectId) && u.name.trim() === pu.name.trim());
-      });
-    });
-  })();
+  const filteredUnits = allUnits?.filter(u => !subjectId || u.subjectId === parseInt(subjectId)) ?? [];
 
   // Fetch questions for active exam
   const { data: activeExam, refetch: refetchExam } = useQuery({
