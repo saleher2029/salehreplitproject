@@ -83,15 +83,18 @@ export default function AdminExams() {
     n.trim().replace(/\s+/g, " ")
       .replace(/آ|أ|إ|ٱ/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
       .replace(/َ|ُ|ِ|ّ|ْ|ٌ|ً|ٍ/g, "");
+  const nameMatches = (a: string, b: string) => {
+    const na = normName(a), nb = normName(b);
+    return na === nb || na.startsWith(nb) || nb.startsWith(na);
+  };
   const filteredSubjects = (() => {
     if (!allSubjects || !primarySpecId) return [];
     const primarySubs = allSubjects.filter(s => s.specializationId === primarySpecId);
     if (selectedSpecIds.length <= 1) return primarySubs;
     const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
     return primarySubs.filter(ps => {
-      const nn = normName(ps.name);
       return otherSpecIds.every(specId =>
-        allSubjects.some(s => s.specializationId === specId && normName(s.name) === nn)
+        allSubjects.some(s => s.specializationId === specId && nameMatches(s.name, ps.name))
       );
     });
   })();
@@ -125,8 +128,19 @@ export default function AdminExams() {
     const unit = allUnits?.find(u => u.id === item.unitId);
     const sub = allSubjects?.find(s => s.id === unit?.subjectId);
     setSubjectId(unit?.subjectId?.toString() ?? "");
-    setSelectedSpecIds(sub ? [sub.specializationId] : []);
     setUnitId(item.unitId?.toString() ?? "");
+
+    const specIds: number[] = [];
+    if (sub) specIds.push(sub.specializationId);
+    const linkedUnitIds = examTargetLinks?.[item.id] ?? [];
+    for (const luid of linkedUnitIds) {
+      const lu = allUnits?.find(u => u.id === luid);
+      if (!lu) continue;
+      const ls = allSubjects?.find(s => s.id === lu.subjectId);
+      if (ls && !specIds.includes(ls.specializationId)) specIds.push(ls.specializationId);
+    }
+    setSelectedSpecIds(specIds);
+
     setSaveError(null);
     setDuplicateStatus(null);
     setPhase("exam");
@@ -184,7 +198,7 @@ export default function AdminExams() {
     const linkedUnitIds = new Set(examTargetLinks?.[exam.id] ?? []);
     return specializations.filter(spec => {
       if (spec.id === examSpecId) return false;
-      const matchingSubs = allSubjects.filter(s => s.specializationId === spec.id && normName(s.name) === subjectNN);
+      const matchingSubs = allSubjects.filter(s => s.specializationId === spec.id && nameMatches(s.name, subject.name));
       if (matchingSubs.length === 0) return false;
       const matchingUnits = matchingSubs.flatMap(ms => allUnits!.filter(u => u.subjectId === ms.id && normName(u.name) === unitNN));
       if (matchingUnits.length === 0) return false;
@@ -290,8 +304,35 @@ export default function AdminExams() {
 
     if (editingExamId) {
       updateExamMut.mutate({ id: editingExamId, data }, {
-        onSuccess: () => {
+        onSuccess: async () => {
           queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+          if (selectedSpecIds.length > 1 && primarySpecId) {
+            const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
+            const alreadyLinkedSpecIds = new Set<number>();
+            const linkedUnitIds = examTargetLinks?.[editingExamId] ?? [];
+            for (const luid of linkedUnitIds) {
+              const lu = allUnits?.find(u => u.id === luid);
+              if (!lu) continue;
+              const ls = allSubjects?.find(s => s.id === lu.subjectId);
+              if (ls) alreadyLinkedSpecIds.add(ls.specializationId);
+            }
+            const newSpecIds = otherSpecIds.filter(id => !alreadyLinkedSpecIds.has(id));
+            if (newSpecIds.length > 0) {
+              try {
+                const res = await fetch(`/api/exams/${editingExamId}/link-to-specs`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                  body: JSON.stringify({ specializationIds: newSpecIds }),
+                });
+                const linkData = await res.json();
+                if (res.ok) {
+                  const successCount = linkData.results?.filter((r: any) => r.unitId).length ?? 0;
+                  if (successCount > 0) setDuplicateStatus(`✓ تم ربط الاختبار بـ ${successCount} تخصص إضافي`);
+                }
+                queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
+              } catch {}
+            }
+          }
           setPhase("questions");
           resetQForm();
         },
