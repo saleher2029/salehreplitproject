@@ -64,7 +64,7 @@ export default function AdminExams() {
 
   // Exam form state
   const [selectedSpecIds, setSelectedSpecIds] = useState<number[]>([]);
-  const [subjectId, setSubjectId] = useState("");
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   const [unitId, setUnitId] = useState("");
   const [title, setTitle] = useState("");
   const [timeLimit, setTimeLimit] = useState("");
@@ -81,7 +81,6 @@ export default function AdminExams() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const optionFileRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
 
-  const primarySpecId = selectedSpecIds.length > 0 ? selectedSpecIds[0] : null;
   const normName = (n: string) =>
     n.trim().replace(/\s+/g, " ")
       .replace(/آ|أ|إ|ٱ/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
@@ -90,18 +89,45 @@ export default function AdminExams() {
     const na = normName(a), nb = normName(b);
     return na === nb || na.startsWith(nb) || nb.startsWith(na);
   };
-  const filteredSubjects = (() => {
-    if (!allSubjects || !primarySpecId) return [];
-    const primarySubs = allSubjects.filter(s => s.specializationId === primarySpecId);
-    if (selectedSpecIds.length <= 1) return primarySubs;
-    const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
-    return primarySubs.filter(ps => {
-      return otherSpecIds.every(specId =>
-        allSubjects.some(s => s.specializationId === specId && nameMatches(s.name, ps.name))
-      );
+
+  const availableSubjects = (() => {
+    if (!allSubjects || selectedSpecIds.length === 0) return [];
+    return allSubjects.filter(s => selectedSpecIds.includes(s.specializationId));
+  })();
+
+  const getSpecName = (specId: number) => specializations?.find(sp => sp.id === specId)?.name ?? "";
+
+  const filteredUnits = (() => {
+    if (!allUnits || selectedSubjectIds.length === 0) return [];
+    const orderedSubs = selectedSubjectIds
+      .map(id => allSubjects?.find(s => s.id === id))
+      .filter((s): s is NonNullable<typeof s> => !!s);
+    if (orderedSubs.length === 0) return [];
+    const firstSub = orderedSubs[0];
+    const firstSubUnits = allUnits.filter(u => u.subjectId === firstSub.id);
+    if (orderedSubs.length === 1) return firstSubUnits;
+    return firstSubUnits.filter(pu => {
+      return orderedSubs.slice(1).every(otherSub => {
+        const otherUnits = allUnits.filter(u => u.subjectId === otherSub.id);
+        return otherUnits.some(ou => nameMatches(ou.name, pu.name));
+      });
     });
   })();
-  const filteredUnits = allUnits?.filter(u => !subjectId || u.subjectId === parseInt(subjectId)) ?? [];
+
+  const primarySpecId = (() => {
+    if (unitId && allUnits && allSubjects) {
+      const u = allUnits.find(u => u.id === parseInt(unitId));
+      if (u) {
+        const s = allSubjects.find(s => s.id === u.subjectId);
+        if (s) return s.specializationId;
+      }
+    }
+    if (selectedSubjectIds.length > 0 && allSubjects) {
+      const firstSub = allSubjects.find(s => s.id === selectedSubjectIds[0]);
+      if (firstSub) return firstSub.specializationId;
+    }
+    return selectedSpecIds[0] ?? null;
+  })();
 
   // Fetch questions for active exam
   const { data: activeExam, refetch: refetchExam } = useQuery({
@@ -114,7 +140,7 @@ export default function AdminExams() {
   const openCreate = () => {
     setEditingExamId(null);
     setActiveExamId(null);
-    setSelectedSpecIds([]); setSubjectId(""); setUnitId(""); setTitle(""); setTimeLimit(""); setQuestionLimit("");
+    setSelectedSpecIds([]); setSelectedSubjectIds([]); setUnitId(""); setTitle(""); setTimeLimit(""); setQuestionLimit("");
     setSaveError(null);
     setDuplicateStatus(null);
     setPhase("exam");
@@ -130,19 +156,26 @@ export default function AdminExams() {
     setQuestionLimit(item.questionLimit?.toString() ?? "");
     const unit = allUnits?.find(u => u.id === item.unitId);
     const sub = allSubjects?.find(s => s.id === unit?.subjectId);
-    setSubjectId(unit?.subjectId?.toString() ?? "");
     setUnitId(item.unitId?.toString() ?? "");
 
     const specIds: number[] = [];
-    if (sub) specIds.push(sub.specializationId);
+    const subjectIds: number[] = [];
+    if (sub) {
+      specIds.push(sub.specializationId);
+      subjectIds.push(sub.id);
+    }
     const linkedUnitIds = examTargetLinks?.[item.id] ?? [];
     for (const luid of linkedUnitIds) {
       const lu = allUnits?.find(u => u.id === luid);
       if (!lu) continue;
       const ls = allSubjects?.find(s => s.id === lu.subjectId);
-      if (ls && !specIds.includes(ls.specializationId)) specIds.push(ls.specializationId);
+      if (ls) {
+        if (!specIds.includes(ls.specializationId)) specIds.push(ls.specializationId);
+        if (!subjectIds.includes(ls.id)) subjectIds.push(ls.id);
+      }
     }
     setSelectedSpecIds(specIds);
+    setSelectedSubjectIds(subjectIds);
 
     setSaveError(null);
     setDuplicateStatus(null);
@@ -250,8 +283,8 @@ export default function AdminExams() {
   };
 
   const handleFinishExam = async () => {
-    if (activeExamId && selectedSpecIds.length > 1 && primarySpecId) {
-      const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
+    if (activeExamId && derivedSpecIds.length > 1 && primarySpecId) {
+      const otherSpecIds = derivedSpecIds.filter(id => id !== primarySpecId);
       setIsDuplicating(true);
       try {
         const res = await fetch(`/api/exams/${activeExamId}/link-to-specs`, {
@@ -263,7 +296,7 @@ export default function AdminExams() {
         if (!res.ok) throw new Error(data.error || "فشل الربط");
         const successCount = data.results?.filter((r: any) => r.unitId).length ?? 0;
         const failedResults = data.results?.filter((r: any) => !r.unitId) ?? [];
-        let msg = `✓ تم ربط الاختبار بـ ${successCount} تخصص بنجاح`;
+        let msg = `✓ تم ربط الاختبار بـ ${successCount} مادة إضافية بنجاح`;
         if (failedResults.length > 0) {
           const specNames = failedResults.map((r: any) => {
             const spec = specializations?.find(s => s.id === r.specId);
@@ -305,6 +338,16 @@ export default function AdminExams() {
     } catch {}
   };
 
+  const derivedSpecIds = (() => {
+    if (!allSubjects) return [];
+    const specIds = new Set<number>();
+    for (const sid of selectedSubjectIds) {
+      const sub = allSubjects.find(s => s.id === sid);
+      if (sub) specIds.add(sub.specializationId);
+    }
+    return [...specIds];
+  })();
+
   // ─── Save exam (create or edit) ─────────────────────────────────────────────
   const handleSaveExam = () => {
     if (!title.trim() || !unitId) return;
@@ -316,37 +359,40 @@ export default function AdminExams() {
       questionLimit: questionLimit ? parseInt(questionLimit) : null,
     };
 
+    const linkToOtherSpecs = async (examId: number) => {
+      if (derivedSpecIds.length <= 1 || !primarySpecId) return;
+      const otherSpecIds = derivedSpecIds.filter(id => id !== primarySpecId);
+      const alreadyLinkedSpecIds = new Set<number>();
+      const linkedUnitIds = examTargetLinks?.[examId] ?? [];
+      for (const luid of linkedUnitIds) {
+        const lu = allUnits?.find(u => u.id === luid);
+        if (!lu) continue;
+        const ls = allSubjects?.find(s => s.id === lu.subjectId);
+        if (ls) alreadyLinkedSpecIds.add(ls.specializationId);
+      }
+      const newSpecIds = otherSpecIds.filter(id => !alreadyLinkedSpecIds.has(id));
+      if (newSpecIds.length > 0) {
+        try {
+          const res = await fetch(`/api/exams/${examId}/link-to-specs`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ specializationIds: newSpecIds }),
+          });
+          const linkData = await res.json();
+          if (res.ok) {
+            const successCount = linkData.results?.filter((r: any) => r.unitId).length ?? 0;
+            if (successCount > 0) setDuplicateStatus(`✓ تم ربط الاختبار بـ ${successCount} مادة إضافية`);
+          }
+          queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
+        } catch {}
+      }
+    };
+
     if (editingExamId) {
       updateExamMut.mutate({ id: editingExamId, data }, {
         onSuccess: async () => {
           queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
-          if (selectedSpecIds.length > 1 && primarySpecId) {
-            const otherSpecIds = selectedSpecIds.filter(id => id !== primarySpecId);
-            const alreadyLinkedSpecIds = new Set<number>();
-            const linkedUnitIds = examTargetLinks?.[editingExamId] ?? [];
-            for (const luid of linkedUnitIds) {
-              const lu = allUnits?.find(u => u.id === luid);
-              if (!lu) continue;
-              const ls = allSubjects?.find(s => s.id === lu.subjectId);
-              if (ls) alreadyLinkedSpecIds.add(ls.specializationId);
-            }
-            const newSpecIds = otherSpecIds.filter(id => !alreadyLinkedSpecIds.has(id));
-            if (newSpecIds.length > 0) {
-              try {
-                const res = await fetch(`/api/exams/${editingExamId}/link-to-specs`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                  body: JSON.stringify({ specializationIds: newSpecIds }),
-                });
-                const linkData = await res.json();
-                if (res.ok) {
-                  const successCount = linkData.results?.filter((r: any) => r.unitId).length ?? 0;
-                  if (successCount > 0) setDuplicateStatus(`✓ تم ربط الاختبار بـ ${successCount} تخصص إضافي`);
-                }
-                queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
-              } catch {}
-            }
-          }
+          await linkToOtherSpecs(editingExamId);
           setPhase("questions");
           resetQForm();
         },
@@ -356,10 +402,11 @@ export default function AdminExams() {
       });
     } else {
       createExamMut.mutate({ data }, {
-        onSuccess: (created) => {
+        onSuccess: async (created) => {
           queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
           setActiveExamId(created.id);
           setEditingExamId(created.id);
+          await linkToOtherSpecs(created.id);
           setPhase("questions");
           resetQForm();
         },
@@ -512,10 +559,14 @@ export default function AdminExams() {
                           if (isSelected) {
                             const newIds = selectedSpecIds.filter(id => id !== s.id);
                             setSelectedSpecIds(newIds);
+                            setSelectedSubjectIds(prev => prev.filter(sid => {
+                              const sub = allSubjects?.find(ss => ss.id === sid);
+                              return sub ? sub.specializationId !== s.id : true;
+                            }));
                           } else {
                             setSelectedSpecIds([...selectedSpecIds, s.id]);
                           }
-                          setSubjectId(""); setUnitId("");
+                          setUnitId("");
                         }}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-bold transition-all ${
                           isSelected
@@ -525,39 +576,69 @@ export default function AdminExams() {
                       >
                         {isSelected ? <Check className="w-3.5 h-3.5" /> : null}
                         {s.name}
-                        {selectedSpecIds[0] === s.id && selectedSpecIds.length > 1 && (
-                          <span className="text-[10px] bg-primary-foreground/20 px-1.5 py-0.5 rounded">الرئيسي</span>
-                        )}
                       </button>
                     );
                   })}
                 </div>
-                {selectedSpecIds.length > 1 && (
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-muted-foreground">المواد</label>
+                <p className="text-xs text-muted-foreground">اختر مادة أو أكثر لنشر الاختبار فيها — عند اختيار عدة مواد تظهر الوحدات المشتركة</p>
+                {selectedSpecIds.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3 border border-dashed border-border rounded-xl text-center">اختر تخصصاً أولاً</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 p-3 border border-input rounded-xl bg-background max-h-48 overflow-y-auto">
+                    {availableSubjects.map(s => {
+                      const isSelected = selectedSubjectIds.includes(s.id);
+                      const specName = getSpecName(s.specializationId);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedSubjectIds(prev => prev.filter(id => id !== s.id));
+                            } else {
+                              setSelectedSubjectIds(prev => [...prev, s.id]);
+                            }
+                            setUnitId("");
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-bold transition-all ${
+                            isSelected
+                              ? "bg-secondary text-secondary-foreground border-secondary shadow-sm"
+                              : "bg-background text-muted-foreground border-border hover:border-secondary hover:text-secondary"
+                          }`}
+                        >
+                          {isSelected ? <Check className="w-3.5 h-3.5" /> : null}
+                          {s.name}
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${isSelected ? "bg-secondary-foreground/20" : "bg-muted"}`}>
+                            {specName}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {selectedSubjectIds.length > 1 && (
                   <p className="text-xs text-secondary font-medium flex items-center gap-1">
                     <Copy className="w-3 h-3" />
-                    سيتم ربط الاختبار بـ {selectedSpecIds.length - 1} تخصص إضافي (نفس المادة والوحدة)
+                    سيتم نشر الاختبار في {selectedSubjectIds.length} مادة — الوحدات المشتركة فقط
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-muted-foreground">المادة</label>
-                <select value={subjectId} onChange={e => { setSubjectId(e.target.value); setUnitId(""); }}
-                  disabled={selectedSpecIds.length === 0}
-                  className="flex h-12 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
-                  <option value="">اختر المادة...</option>
-                  {filteredSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-
-              <div className="space-y-2">
                 <label className="text-sm font-bold text-muted-foreground">الوحدة</label>
                 <select value={unitId} onChange={e => setUnitId(e.target.value)}
-                  disabled={!subjectId}
+                  disabled={selectedSubjectIds.length === 0}
                   className="flex h-12 w-full rounded-xl border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
                   <option value="">اختر الوحدة...</option>
                   {filteredUnits.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
+                {selectedSubjectIds.length > 1 && filteredUnits.length === 0 && (
+                  <p className="text-xs text-destructive">لا توجد وحدات مشتركة بين المواد المختارة</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -751,10 +832,10 @@ export default function AdminExams() {
 
               {/* Done button */}
               <div className="space-y-3 pt-2 border-t border-border">
-                {selectedSpecIds.length > 1 && (
+                {derivedSpecIds.length > 1 && (
                   <div className="p-3 rounded-xl bg-secondary/10 text-secondary text-sm font-medium border border-secondary/20 flex items-center gap-2">
                     <Copy className="w-4 h-4 shrink-0" />
-                    عند الانتهاء، سيتم ربط الاختبار بـ {selectedSpecIds.length - 1} تخصص إضافي
+                    عند الانتهاء، سيتم ربط الاختبار بـ {selectedSubjectIds.length - 1} مادة إضافية
                   </div>
                 )}
                 <Button
@@ -763,11 +844,11 @@ export default function AdminExams() {
                   className="w-full h-11 rounded-xl font-bold"
                 >
                   {isDuplicating ? (
-                    <>جاري ربط الاختبار بالتخصصات الأخرى...</>
+                    <>جاري ربط الاختبار بالمواد الأخرى...</>
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4 ml-2" />
-                      {selectedSpecIds.length > 1 ? "إنهاء وربط الاختبار بالتخصصات الأخرى" : "انتهيت من الاختبار"}
+                      {derivedSpecIds.length > 1 ? `إنهاء وربط الاختبار بـ ${selectedSubjectIds.length - 1} مادة أخرى` : "انتهيت من الاختبار"}
                     </>
                   )}
                 </Button>
