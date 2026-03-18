@@ -5,6 +5,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));

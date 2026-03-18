@@ -77,6 +77,7 @@ export default function TakeExam({ params }: { params: { id: string } }) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const navStripRef = useRef<HTMLDivElement>(null);
   const pKey = user ? progressKey(user.id, examId) : "";
 
   // ── Restore saved progress ──────────────────────────────────────────────
@@ -89,6 +90,16 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     if (saved.bookmarked) setBookmarked(new Set(saved.bookmarked));
     if (typeof saved.currentIdx === "number") setCurrentIdx(saved.currentIdx);
   }, [pKey, exam]);
+
+  // ── Auto-scroll nav strip to current question ─────────────────────────
+  useEffect(() => {
+    if (!navStripRef.current) return;
+    const container = navStripRef.current;
+    const btn = container.children[currentIdx] as HTMLElement | undefined;
+    if (!btn) return;
+    const scrollLeft = btn.offsetLeft - container.clientWidth / 2 + btn.clientWidth / 2;
+    container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+  }, [currentIdx]);
 
   // ── Auto-save progress whenever state changes ───────────────────────────
   useEffect(() => {
@@ -239,8 +250,12 @@ export default function TakeExam({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Question number grid */}
-        <div className="flex flex-wrap gap-1.5">
+        {/* Question number strip - horizontal scrollable */}
+        <div
+          ref={navStripRef}
+          className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
+        >
           {questions.map((q, i) => {
             const answered = !!answers[q.id];
             const isFlagged = flagged.has(q.id);
@@ -250,7 +265,7 @@ export default function TakeExam({ params }: { params: { id: string } }) {
               <button
                 key={q.id}
                 onClick={() => setCurrentIdx(i)}
-                className={`w-9 h-9 rounded-lg text-sm font-bold border-2 transition-all duration-150 flex items-center justify-center relative
+                className={`w-8 h-8 shrink-0 rounded-lg text-xs font-bold border-2 transition-all duration-150 flex items-center justify-center relative
                   ${isCurrent
                     ? "border-primary bg-primary text-primary-foreground shadow-md scale-110"
                     : isFlagged
@@ -262,24 +277,11 @@ export default function TakeExam({ params }: { params: { id: string } }) {
               >
                 {i + 1}
                 {isBookmarkedQ && (
-                  <span className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-orange-400 rounded-full border border-background" />
+                  <span className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-orange-400 rounded-full border border-background" />
                 )}
               </button>
             );
           })}
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <span className="w-4 h-4 rounded border-2 border-primary bg-primary/10 inline-block" /> مجاب
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-4 h-4 rounded border-2 border-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 inline-block" /> للمراجعة
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-full bg-orange-400 inline-block" /> مهم
-          </span>
         </div>
       </div>
 
