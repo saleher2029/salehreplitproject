@@ -252,6 +252,7 @@ export const GetExamsResponseItem = zod.object({
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
   questionLimit: zod.number().nullish(),
+  isPublished: zod.boolean(),
   createdAt: zod.date(),
 });
 export const GetExamsResponse = zod.array(GetExamsResponseItem);
@@ -280,6 +281,7 @@ export const GetExamResponse = zod.object({
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
   questionLimit: zod.number().nullish(),
+  isPublished: zod.boolean(),
   createdAt: zod.date(),
   questions: zod.array(
     zod.object({
@@ -322,6 +324,7 @@ export const UpdateExamResponse = zod.object({
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
   questionLimit: zod.number().nullish(),
+  isPublished: zod.boolean(),
   createdAt: zod.date(),
 });
 

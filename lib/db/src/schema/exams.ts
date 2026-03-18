@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { unitsTable } from "./units";
@@ -9,6 +9,7 @@ export const examsTable = pgTable("exams", {
   unitId: integer("unit_id").notNull().references(() => unitsTable.id, { onDelete: "cascade" }),
   timeLimit: integer("time_limit"),
   questionLimit: integer("question_limit"),
+  isPublished: boolean("is_published").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -49,6 +49,29 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   next();
 }
 
+export async function optionalAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    next();
+    return;
+  }
+  const token = authHeader.slice(7);
+  const payload = verifyToken(token);
+  if (!payload) {
+    next();
+    return;
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.userId));
+  if (user) {
+    if (payload.sessionToken && user.sessionToken && payload.sessionToken !== user.sessionToken) {
+      next();
+      return;
+    }
+    (req as any).user = user;
+  }
+  next();
+}
+
 export async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   await requireAuth(req, res, async () => {
     const user = (req as any).user;

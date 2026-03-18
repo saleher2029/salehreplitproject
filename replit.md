@@ -44,6 +44,7 @@ A full Arabic Tawjihi (high school final exam) practice platform.
 - **Admin "ملاحظات الطلبة" page**: `/admin/notes` shows all notes with difficulty stats, expandable cards
 - **Bookmarked questions section** in exam result page showing the student's starred questions
 - **Multi-specialization exam linking**: admin selects multiple specializations when creating an exam; the exam is linked (not duplicated) to matching units in other specs via `POST /api/exams/:id/link-to-specs`. One exam record serves all linked specs via `exam_target_units` junction table. Students see the exam under each linked unit.
+- **Exam draft/publish system**: exams start as "مسودة" (draft, `isPublished=false`) and are hidden from students. Admin toggles publish via status badge in exams table or `PATCH /api/exams/:id/publish`. `optionalAuth` middleware detects admin vs student. Unpublished exams blocked on GET /exams, GET /exams/:id, and POST /results.
 
 ### Admin Credentials
 - Username: `admin`

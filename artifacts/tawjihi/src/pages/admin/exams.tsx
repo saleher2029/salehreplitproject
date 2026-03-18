@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, Edit2, Trash2, Clock, BookOpen, ChevronRight,
   ImagePlus, X, CheckCircle, CheckCircle2, ArrowLeft, Copy, Check, Share2,
+  Eye, EyeOff,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -291,6 +292,17 @@ export default function AdminExams() {
     setDuplicateStatus(null);
     queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
     queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
+  };
+
+  const handleTogglePublish = async (examId: number, currentlyPublished: boolean) => {
+    try {
+      await fetch(`/api/exams/${examId}/publish`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ isPublished: !currentlyPublished }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+    } catch {}
   };
 
   // ─── Save exam (create or edit) ─────────────────────────────────────────────
@@ -773,6 +785,7 @@ export default function AdminExams() {
             <tr>
               <th className="px-6 py-4 border-b">#</th>
               <th className="px-6 py-4 border-b">الاختبار</th>
+              <th className="px-6 py-4 border-b text-center">الحالة</th>
               <th className="px-6 py-4 border-b">الوحدة</th>
               <th className="px-6 py-4 border-b">التخصصات</th>
               <th className="px-6 py-4 border-b text-center">الوقت</th>
@@ -783,10 +796,10 @@ export default function AdminExams() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={8} className="px-6 py-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
+              <tr><td colSpan={9} className="px-6 py-8 text-center text-muted-foreground">جاري التحميل...</td></tr>
             ) : exams?.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-16 text-center">
+                <td colSpan={9} className="px-6 py-16 text-center">
                   <div className="space-y-3">
                     <BookOpen className="w-10 h-10 text-muted-foreground mx-auto" />
                     <p className="font-bold text-muted-foreground">لا توجد اختبارات بعد</p>
@@ -798,6 +811,20 @@ export default function AdminExams() {
               <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20">
                 <td className="px-6 py-4 font-mono text-muted-foreground text-xs">{item.id}</td>
                 <td className="px-6 py-4 font-bold">{item.title}</td>
+                <td className="px-6 py-4 text-center">
+                  <button
+                    onClick={() => handleTogglePublish(item.id, item.isPublished)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                      item.isPublished
+                        ? "bg-green-100 text-green-700 hover:bg-green-200"
+                        : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                    }`}
+                    title={item.isPublished ? "اضغط لإلغاء النشر" : "اضغط للنشر"}
+                  >
+                    {item.isPublished ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    {item.isPublished ? "منشور" : "مسودة"}
+                  </button>
+                </td>
                 <td className="px-6 py-4 text-muted-foreground text-sm">{allUnits?.find(u => u.id === item.unitId)?.name ?? "—"}</td>
                 <td className="px-6 py-4">
                   <div className="flex flex-wrap gap-1">

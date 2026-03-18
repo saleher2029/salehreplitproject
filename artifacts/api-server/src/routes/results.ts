@@ -44,9 +44,22 @@ router.post("/results", requireAuth, async (req, res): Promise<void> => {
   }
   const { examId, answers, bookmarkedQuestionIds } = parsed.data;
 
+  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
+  if (!exam || !exam.isPublished) {
+    const isAdmin = user.role === "admin" || user.role === "supervisor";
+    if (!exam) {
+      res.status(404).json({ error: "الاختبار غير موجود" });
+      return;
+    }
+    if (!exam.isPublished && !isAdmin) {
+      res.status(403).json({ error: "الاختبار غير متاح حالياً" });
+      return;
+    }
+  }
+
   const questions = await db.select().from(questionsTable).where(eq(questionsTable.examId, examId));
   if (questions.length === 0) {
-    res.status(404).json({ error: "الاختبار غير موجود أو لا يحتوي على أسئلة" });
+    res.status(404).json({ error: "الاختبار لا يحتوي على أسئلة" });
     return;
   }
 
@@ -80,7 +93,6 @@ router.post("/results", requireAuth, async (req, res): Promise<void> => {
     });
   }
 
-  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
   const answerDetails = questions.map(q => ({
     questionId: q.id,
     questionText: q.text,

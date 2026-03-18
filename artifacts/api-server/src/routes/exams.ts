@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, examsTable, questionsTable, unitsTable, subjectsTable, examTargetUnitsTable } from "@workspace/db";
 import { eq, count, and, inArray } from "drizzle-orm";
-import { requireAdmin } from "../lib/auth";
+import { requireAdmin, optionalAuth } from "../lib/auth";
 import { broadcastChange } from "../sse";
 import {
   GetExamsResponse,
@@ -17,13 +17,15 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/exams", async (req, res): Promise<void> => {
+router.get("/exams", optionalAuth, async (req, res): Promise<void> => {
+  const user = (req as any).user;
+  const isAdmin = user && (user.role === "admin" || user.role === "supervisor");
   const queryParsed = GetExamsQueryParams.safeParse(req.query);
   let exams;
   if (queryParsed.success && queryParsed.data.unitId) {
     const unitId = queryParsed.data.unitId;
     const directExams = await db.select().from(examsTable)
-      .where(eq(examsTable.unitId, unitId))
+      .where(isAdmin ? eq(examsTable.unitId, unitId) : and(eq(examsTable.unitId, unitId), eq(examsTable.isPublished, true)))
       .orderBy(examsTable.id);
     const linkedRows = await db.select({ examId: examTargetUnitsTable.examId })
       .from(examTargetUnitsTable)
@@ -32,12 +34,14 @@ router.get("/exams", async (req, res): Promise<void> => {
     let linkedExams: typeof directExams = [];
     if (linkedExamIds.length > 0) {
       linkedExams = await db.select().from(examsTable)
-        .where(inArray(examsTable.id, linkedExamIds))
+        .where(isAdmin ? inArray(examsTable.id, linkedExamIds) : and(inArray(examsTable.id, linkedExamIds), eq(examsTable.isPublished, true)))
         .orderBy(examsTable.id);
     }
     exams = [...directExams, ...linkedExams];
   } else {
-    exams = await db.select().from(examsTable).orderBy(examsTable.id);
+    exams = isAdmin
+      ? await db.select().from(examsTable).orderBy(examsTable.id)
+      : await db.select().from(examsTable).where(eq(examsTable.isPublished, true)).orderBy(examsTable.id);
   }
   const examsWithCount = await Promise.all(exams.map(async (exam) => {
     const [{ count: qCount }] = await db.select({ count: count() }).from(questionsTable).where(eq(questionsTable.examId, exam.id));
@@ -57,14 +61,20 @@ router.post("/exams", requireAdmin, async (req, res): Promise<void> => {
   res.status(201).json({ ...exam, questionCount: 0 });
 });
 
-router.get("/exams/:id", async (req, res): Promise<void> => {
+router.get("/exams/:id", optionalAuth, async (req, res): Promise<void> => {
   const params = GetExamParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
+  const user = (req as any).user;
+  const isAdmin = user && (user.role === "admin" || user.role === "supervisor");
   const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, params.data.id));
   if (!exam) {
+    res.status(404).json({ error: "الاختبار غير موجود" });
+    return;
+  }
+  if (!exam.isPublished && !isAdmin) {
     res.status(404).json({ error: "الاختبار غير موجود" });
     return;
   }
@@ -107,6 +117,17 @@ router.delete("/exams/:id", requireAdmin, async (req, res): Promise<void> => {
   await db.delete(examsTable).where(eq(examsTable.id, params.data.id));
   broadcastChange("exams");
   res.sendStatus(204);
+});
+
+router.patch("/exams/:id/publish", requireAdmin, async (req, res): Promise<void> => {
+  const examId = parseInt(req.params.id);
+  if (isNaN(examId)) { res.status(400).json({ error: "معرف غير صالح" }); return; }
+  const { isPublished } = req.body as { isPublished?: boolean };
+  if (typeof isPublished !== "boolean") { res.status(400).json({ error: "يجب تحديد حالة النشر" }); return; }
+  const [exam] = await db.update(examsTable).set({ isPublished }).where(eq(examsTable.id, examId)).returning();
+  if (!exam) { res.status(404).json({ error: "الاختبار غير موجود" }); return; }
+  broadcastChange("exams");
+  res.json({ id: exam.id, isPublished: exam.isPublished });
 });
 
 router.get("/exam-target-units", requireAdmin, async (req, res): Promise<void> => {
