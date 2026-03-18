@@ -75,8 +75,10 @@ export default function AdminExams() {
   const [qText, setQText] = useState("");
   const [qImageUrl, setQImageUrl] = useState<string | null>(null);
   const [qOptions, setQOptions] = useState(["", "", "", ""]);
+  const [qOptionImages, setQOptionImages] = useState<(string | null)[]>([null, null, null, null]);
   const [qCorrect, setQCorrect] = useState<"A" | "B" | "C" | "D">("A");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const optionFileRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
 
   const primarySpecId = selectedSpecIds.length > 0 ? selectedSpecIds[0] : null;
   const normName = (n: string) =>
@@ -370,8 +372,10 @@ export default function AdminExams() {
     setEditingQId(null);
     setQText(""); setQImageUrl(null);
     setQOptions(["", "", "", ""]);
+    setQOptionImages([null, null, null, null]);
     setQCorrect("A");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    optionFileRefs.current.forEach(r => { if (r) r.value = ""; });
   };
 
   const openEditQuestion = (q: any) => {
@@ -379,6 +383,7 @@ export default function AdminExams() {
     setQText(q.text ?? "");
     setQImageUrl(q.imageUrl ?? null);
     setQOptions([q.optionA, q.optionB, q.optionC, q.optionD]);
+    setQOptionImages([q.optionAImage ?? null, q.optionBImage ?? null, q.optionCImage ?? null, q.optionDImage ?? null]);
     setQCorrect(q.correctOption);
   };
 
@@ -389,17 +394,29 @@ export default function AdminExams() {
     catch { alert("فشل تحميل الصورة"); }
   };
 
+  const handleOptionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await imageToBase64(file);
+      setQOptionImages(prev => { const next = [...prev]; next[idx] = base64; return next; });
+    } catch { alert("فشل تحميل الصورة"); }
+  };
+
   const handleSaveQuestion = () => {
     if (!activeExamId) return;
     if (!qText.trim() && !qImageUrl) return;
-    if (qOptions.some(o => !o.trim())) return;
+    const hasEmptyTextOption = qOptions.some((o, i) => !o.trim() && !qOptionImages[i]);
+    if (hasEmptyTextOption) return;
 
     const data = {
       examId: activeExamId,
       text: qText.trim() || " ",
       imageUrl: qImageUrl ?? null,
-      optionA: qOptions[0], optionB: qOptions[1],
-      optionC: qOptions[2], optionD: qOptions[3],
+      optionA: qOptions[0] || " ", optionAImage: qOptionImages[0] ?? null,
+      optionB: qOptions[1] || " ", optionBImage: qOptionImages[1] ?? null,
+      optionC: qOptions[2] || " ", optionCImage: qOptionImages[2] ?? null,
+      optionD: qOptions[3] || " ", optionDImage: qOptionImages[3] ?? null,
       correctOption: qCorrect,
       orderIndex: editingQId
         ? (activeExam?.questions?.find(q => q.id === editingQId)?.orderIndex ?? 0)
@@ -425,7 +442,7 @@ export default function AdminExams() {
   };
 
   const isSavingQ = createQMut.isPending || updateQMut.isPending;
-  const canSaveQ = (!!qText.trim() || !!qImageUrl) && qOptions.every(o => o.trim());
+  const canSaveQ = (!!qText.trim() || !!qImageUrl) && qOptions.every((o, i) => o.trim() || !!qOptionImages[i]);
 
   return (
     <div className="space-y-6">
@@ -666,19 +683,41 @@ export default function AdminExams() {
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {OPTION_KEYS.map((key, i) => (
-                      <div key={key} className="flex items-center gap-2">
-                        <button type="button" onClick={() => setQCorrect(key)}
-                          className={`shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center font-bold text-xs transition-all ${
-                            qCorrect === key
-                              ? "bg-primary border-primary text-primary-foreground"
-                              : "border-border text-muted-foreground hover:border-primary"
-                          }`}>
-                          {qCorrect === key ? <CheckCircle className="w-3.5 h-3.5" /> : OPTION_LABELS[i]}
-                        </button>
-                        <Input value={qOptions[i]}
-                          onChange={e => { const u = [...qOptions]; u[i] = e.target.value; setQOptions(u); }}
-                          placeholder={`الخيار ${OPTION_LABELS[i]}`}
-                          className="h-9 rounded-xl text-sm flex-1" />
+                      <div key={key} className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => setQCorrect(key)}
+                            className={`shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center font-bold text-xs transition-all ${
+                              qCorrect === key
+                                ? "bg-primary border-primary text-primary-foreground"
+                                : "border-border text-muted-foreground hover:border-primary"
+                            }`}>
+                            {qCorrect === key ? <CheckCircle className="w-3.5 h-3.5" /> : OPTION_LABELS[i]}
+                          </button>
+                          <Input value={qOptions[i]}
+                            onChange={e => { const u = [...qOptions]; u[i] = e.target.value; setQOptions(u); }}
+                            placeholder={`الخيار ${OPTION_LABELS[i]}`}
+                            className="h-9 rounded-xl text-sm flex-1" />
+                          <button type="button"
+                            onClick={() => optionFileRefs.current[i]?.click()}
+                            className="shrink-0 w-8 h-8 rounded-lg border border-dashed border-border hover:border-primary flex items-center justify-center transition-colors"
+                            title="إضافة صورة للخيار"
+                          >
+                            <ImagePlus className="w-3.5 h-3.5 text-muted-foreground" />
+                          </button>
+                          <input ref={el => { optionFileRefs.current[i] = el; }} type="file" accept="image/*" className="hidden"
+                            onChange={e => handleOptionImageUpload(e, i)} />
+                        </div>
+                        {qOptionImages[i] && (
+                          <div className="relative mr-9">
+                            <img src={qOptionImages[i]!} alt={`صورة الخيار ${OPTION_LABELS[i]}`}
+                              className="h-16 rounded-lg border border-border object-contain" />
+                            <button type="button"
+                              onClick={() => setQOptionImages(prev => { const n = [...prev]; n[i] = null; return n; })}
+                              className="absolute -top-1.5 -left-1.5 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -263,7 +263,8 @@ export default function ExamResult({ params }: { params: { id: string } }) {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mr-8" dir={isEng ? "ltr" : "rtl"}>
                     {OPTION_KEYS.map((opt, oi) => {
-                      const text = ans[`option${opt}` as keyof typeof ans];
+                      const text = ans[`option${opt}` as keyof typeof ans] as string;
+                      const optImg = ans[`option${opt}Image` as keyof typeof ans] as string | null;
                       const isSelected = ans.selectedOption === opt;
                       const isCorrect = ans.correctOption === opt;
                       let cls = "bg-background border-border text-foreground";
@@ -272,7 +273,10 @@ export default function ExamResult({ params }: { params: { id: string } }) {
                       return (
                         <div key={opt} className={`p-3 rounded-xl border-2 flex items-center gap-2 ${cls}`}>
                           <span className="w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold shrink-0">{GRADE_LABELS[oi]}</span>
-                          <span className="text-sm">{text as string}</span>
+                          <div className="flex-1 space-y-1">
+                            {text.trim() && text.trim() !== " " && <span className="text-sm">{text}</span>}
+                            {optImg && <img src={optImg} alt={`خيار ${GRADE_LABELS[oi]}`} className="max-h-24 rounded-lg object-contain" />}
+                          </div>
                         </div>
                       );
                     })}
@@ -303,7 +307,8 @@ export default function ExamResult({ params }: { params: { id: string } }) {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" dir={isEng ? "ltr" : "rtl"}>
                       {OPTION_KEYS.map((opt, oi) => {
-                        const text = ans[`option${opt}` as keyof typeof ans];
+                        const text = ans[`option${opt}` as keyof typeof ans] as string;
+                        const optImg = ans[`option${opt}Image` as keyof typeof ans] as string | null;
                         const isSelected = ans.selectedOption === opt;
                         const isCorrect = ans.correctOption === opt;
                         let cls = "bg-background border-border text-foreground";
@@ -313,7 +318,10 @@ export default function ExamResult({ params }: { params: { id: string } }) {
                           <div key={opt} className={`p-3 rounded-xl border-2 flex items-center justify-between gap-2 ${cls}`}>
                             <div className="flex items-center gap-2">
                               <span className="w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold shrink-0">{GRADE_LABELS[oi]}</span>
-                              <span className="text-sm">{text as string}</span>
+                              <div className="flex-1 space-y-1">
+                                {text.trim() && text.trim() !== " " && <span className="text-sm">{text}</span>}
+                                {optImg && <img src={optImg} alt={`خيار ${GRADE_LABELS[oi]}`} className="max-h-24 rounded-lg object-contain" />}
+                              </div>
                             </div>
                             {isCorrect && <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />}
                             {isSelected && !isCorrect && <XCircle className="w-4 h-4 text-destructive shrink-0" />}

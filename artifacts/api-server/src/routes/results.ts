@@ -89,9 +89,13 @@ router.post("/results", requireAuth, async (req, res): Promise<void> => {
     correctOption: q.correctOption,
     isCorrect: answerMap.get(q.id) === q.correctOption,
     optionA: q.optionA,
+    optionAImage: q.optionAImage ?? null,
     optionB: q.optionB,
+    optionBImage: q.optionBImage ?? null,
     optionC: q.optionC,
+    optionCImage: q.optionCImage ?? null,
     optionD: q.optionD,
+    optionDImage: q.optionDImage ?? null,
   }));
 
   res.status(201).json({
@@ -195,9 +199,13 @@ router.get("/results/:id", requireAuth, async (req, res): Promise<void> => {
       correctOption: q?.correctOption ?? "",
       isCorrect: ad.isCorrect === 1,
       optionA: q?.optionA ?? "",
+      optionAImage: q?.optionAImage ?? null,
       optionB: q?.optionB ?? "",
+      optionBImage: q?.optionBImage ?? null,
       optionC: q?.optionC ?? "",
+      optionCImage: q?.optionCImage ?? null,
       optionD: q?.optionD ?? "",
+      optionDImage: q?.optionDImage ?? null,
     };
   });
 

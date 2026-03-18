@@ -9,9 +9,13 @@ export const questionsTable = pgTable("questions", {
   text: text("text").notNull(),
   imageUrl: text("image_url"),
   optionA: text("option_a").notNull(),
+  optionAImage: text("option_a_image"),
   optionB: text("option_b").notNull(),
+  optionBImage: text("option_b_image"),
   optionC: text("option_c").notNull(),
+  optionCImage: text("option_c_image"),
   optionD: text("option_d").notNull(),
+  optionDImage: text("option_d_image"),
   correctOption: text("correct_option").notNull(),
   orderIndex: integer("order_index").notNull().default(0),
 });

@@ -405,7 +405,8 @@ export default function TakeExam({ params }: { params: { id: string } }) {
                 dir={isEng ? "ltr" : "rtl"}
               >
                 {(["A", "B", "C", "D"] as const).map((opt, oi) => {
-                  const optText = currentQ[`option${opt}` as keyof typeof currentQ];
+                  const optText = currentQ[`option${opt}` as keyof typeof currentQ] as string;
+                  const optImage = currentQ[`option${opt}Image` as keyof typeof currentQ] as string | null;
                   const isSelected = answers[currentQ.id] === opt;
                   return (
                     <Label
@@ -424,7 +425,17 @@ export default function TakeExam({ params }: { params: { id: string } }) {
                       }`}>
                         {optionLabels[oi]}
                       </div>
-                      <span className="text-base font-semibold leading-snug">{optText as string}</span>
+                      <div className="flex-1 space-y-2">
+                        {optText.trim() && optText.trim() !== " " && (
+                          <span className="text-base font-semibold leading-snug">{optText}</span>
+                        )}
+                        {optImage && (
+                          <img src={optImage} alt={`خيار ${optionLabels[oi]}`}
+                            className="max-h-32 rounded-xl border border-border object-contain cursor-zoom-in"
+                            onClick={(e) => { e.preventDefault(); setZoomedImage(optImage); }}
+                          />
+                        )}
+                      </div>
                     </Label>
                   );
                 })}
