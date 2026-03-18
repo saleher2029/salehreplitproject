@@ -137,9 +137,15 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     }
   }, [phase, exam?.timeLimit]);
 
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+
   useEffect(() => {
     if (timeLeft === null) return;
-    if (timeLeft <= 0) { handleSubmit(); return; }
+    if (timeLeft <= 0) {
+      handleSubmitRef.current();
+      return;
+    }
     timerRef.current = setInterval(() => {
       setTimeLeft(t => (t !== null ? t - 1 : null));
     }, 1000);
