@@ -37,6 +37,7 @@ A full Arabic Tawjihi (high school final exam) practice platform.
 - Subscription system with WhatsApp contact
 - Fully Arabic RTL interface
 - **Exam progress saving**: localStorage saves progress per user/exam (survives network drops/page reload)
+- **Question images**: math questions with ∫, √, matrices, Σ have cropped images from PDF source; served from `artifacts/api-server/uploads/questions/` at `/uploads/questions/` path; `image_url` column in `questions` table
 - **Image zoom modal**: click any question image to open full-screen zoom overlay
 - **Bookmark (star) per question**: mark questions as important (orange dot in grid); stored and sent with submission
 - **Difficulty rating**: after exam, student rates difficulty (سهل/متوسط/صعب) sent to API
