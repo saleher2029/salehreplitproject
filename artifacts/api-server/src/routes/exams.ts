@@ -210,6 +210,26 @@ router.post("/exams/:id/link-to-specs", requireAdmin, async (req, res): Promise<
   res.json({ results });
 });
 
+router.post("/exams/:id/link-unit", requireAdmin, async (req, res): Promise<void> => {
+  const examId = parseInt(req.params.id);
+  const { unitId } = req.body as { unitId?: number };
+  if (isNaN(examId) || !unitId) {
+    res.status(400).json({ error: "معرفات غير صالحة" });
+    return;
+  }
+  const [exam] = await db.select().from(examsTable).where(eq(examsTable.id, examId));
+  if (!exam) { res.status(404).json({ error: "الاختبار غير موجود" }); return; }
+  const [unit] = await db.select().from(unitsTable).where(eq(unitsTable.id, unitId));
+  if (!unit) { res.status(404).json({ error: "الوحدة غير موجودة" }); return; }
+  try {
+    await db.insert(examTargetUnitsTable).values({ examId, unitId }).onConflictDoNothing();
+    broadcastChange("exams");
+    res.json({ status: "تم الربط بنجاح", examId, unitId });
+  } catch (err) {
+    res.status(500).json({ error: "حدث خطأ أثناء الربط" });
+  }
+});
+
 router.post("/exams/:id/unlink-unit", requireAdmin, async (req, res): Promise<void> => {
   const examId = parseInt(req.params.id);
   const { unitId } = req.body as { unitId?: number };
