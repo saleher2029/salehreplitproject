@@ -19,8 +19,24 @@ function getGrade(pct: number): { label: string; color: string; bg: string; bord
   return             { label: "راسب",       color: "text-destructive", bg: "bg-destructive/5", border: "border-destructive" };
 }
 
-const GRADE_LABELS = ["أ", "ب", "ج", "د"];
+const GRADE_LABELS_AR = ["أ", "ب", "ج", "د"];
+const GRADE_LABELS_EN = ["a", "b", "c", "d"];
 const OPTION_KEYS = ["A", "B", "C", "D"] as const;
+
+function detectEnglishFromAnswers(answers: any[]): boolean {
+  let latinCount = 0, totalChars = 0;
+  const sample = answers.slice(0, 5);
+  for (const ans of sample) {
+    for (const key of ["optionA", "optionB", "optionC", "optionD"] as const) {
+      const text = (ans[key] ?? "") as string;
+      for (const ch of text) {
+        if (/[a-zA-Z]/.test(ch)) latinCount++;
+        if (/[a-zA-Zأ-ي]/.test(ch)) totalChars++;
+      }
+    }
+  }
+  return totalChars > 0 && latinCount / totalChars > 0.5;
+}
 
 const DIFFICULTY_OPTIONS = [
   { value: "easy",   label: "سهل",    emoji: "😊", color: "border-green-400 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300" },
@@ -62,6 +78,8 @@ export default function ExamResult({ params }: { params: { id: string } }) {
   if (!result) return <div className="text-center p-8 text-destructive font-bold">النتيجة غير موجودة</div>;
 
   const grade = getGrade(result.percentage);
+  const isEng = detectEnglishFromAnswers(result.answers);
+  const GRADE_LABELS = isEng ? GRADE_LABELS_EN : GRADE_LABELS_AR;
   const wrongAnswers = result.answers.filter(a => !a.isCorrect);
 
   // Parse bookmarked question IDs
@@ -243,7 +261,7 @@ export default function ExamResult({ params }: { params: { id: string } }) {
                       {isRight ? "✓ صحيح" : "✗ خطأ"}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mr-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mr-8" dir={isEng ? "ltr" : "rtl"}>
                     {OPTION_KEYS.map((opt, oi) => {
                       const text = ans[`option${opt}` as keyof typeof ans];
                       const isSelected = ans.selectedOption === opt;
@@ -283,7 +301,7 @@ export default function ExamResult({ params }: { params: { id: string } }) {
                     {ans.questionImage && (
                       <img src={ans.questionImage} alt="سؤال" className="rounded-xl border max-h-64 w-full object-contain" />
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" dir={isEng ? "ltr" : "rtl"}>
                       {OPTION_KEYS.map((opt, oi) => {
                         const text = ans[`option${opt}` as keyof typeof ans];
                         const isSelected = ans.selectedOption === opt;

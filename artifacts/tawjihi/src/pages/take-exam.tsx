@@ -29,7 +29,23 @@ function formatTime(seconds: number) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-const OPTION_LABELS = ["أ", "ب", "ج", "د"];
+const OPTION_LABELS_AR = ["أ", "ب", "ج", "د"];
+const OPTION_LABELS_EN = ["a", "b", "c", "d"];
+
+function isEnglishExam(questions: any[]): boolean {
+  const sample = questions.slice(0, 5);
+  let latinCount = 0, totalChars = 0;
+  for (const q of sample) {
+    for (const key of ["optionA", "optionB", "optionC", "optionD"] as const) {
+      const text = (q[key] ?? "") as string;
+      for (const ch of text) {
+        if (/[a-zA-Z]/.test(ch)) latinCount++;
+        if (/[a-zA-Zأ-ي]/.test(ch)) totalChars++;
+      }
+    }
+  }
+  return totalChars > 0 && latinCount / totalChars > 0.5;
+}
 
 // ── localStorage helpers ─────────────────────────────────────────────────────
 function progressKey(userId: number, examId: number) {
@@ -163,6 +179,9 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     return all;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exam?.id]); // re-shuffle only when exam changes
+
+  const isEng = useMemo(() => isEnglishExam(questions), [questions]);
+  const optionLabels = isEng ? OPTION_LABELS_EN : OPTION_LABELS_AR;
 
   if (!exam && isLoading) return (
     <div className="flex flex-col justify-center items-center h-64 gap-4">
@@ -383,6 +402,7 @@ export default function TakeExam({ params }: { params: { id: string } }) {
                 value={answers[currentQ.id] ?? ""}
                 onValueChange={val => setAnswers(prev => ({ ...prev, [currentQ.id]: val }))}
                 className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                dir={isEng ? "ltr" : "rtl"}
               >
                 {(["A", "B", "C", "D"] as const).map((opt, oi) => {
                   const optText = currentQ[`option${opt}` as keyof typeof currentQ];
@@ -396,12 +416,13 @@ export default function TakeExam({ params }: { params: { id: string } }) {
                           ? "border-primary bg-background shadow-md"
                           : "border-border bg-background hover:bg-muted/60 hover:border-primary/40"
                       }`}
+                      dir={isEng ? "ltr" : "rtl"}
                     >
                       <RadioGroupItem value={opt} id={`q${currentQ.id}-${opt}`} className="sr-only" />
-                      <div className={`w-8 h-8 rounded-full border-2 ml-3 flex items-center justify-center shrink-0 font-bold text-sm transition-colors ${
+                      <div className={`w-8 h-8 rounded-full border-2 ${isEng ? "mr-3" : "ml-3"} flex items-center justify-center shrink-0 font-bold text-sm transition-colors ${
                         isSelected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground text-muted-foreground"
                       }`}>
-                        {OPTION_LABELS[oi]}
+                        {optionLabels[oi]}
                       </div>
                       <span className="text-base font-semibold leading-snug">{optText as string}</span>
                     </Label>
