@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { build as esbuild } from "esbuild";
 import { rm, readFile } from "fs/promises";
+import { execSync } from "child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,7 +70,22 @@ async function buildAll() {
   });
 }
 
-buildAll().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+async function pushSchema() {
+  console.log("pushing database schema...");
+  try {
+    execSync("pnpm --filter @workspace/db run push", {
+      cwd: path.resolve(__dirname, "../.."),
+      stdio: "inherit",
+    });
+    console.log("database schema pushed successfully");
+  } catch (err) {
+    console.error("warning: db schema push failed, continuing build...", err);
+  }
+}
+
+pushSchema()
+  .then(() => buildAll())
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
