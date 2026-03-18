@@ -177,12 +177,17 @@ router.post("/exams/:id/link-to-specs", requireAdmin, async (req, res): Promise<
     try {
       const allSubsInSpec = await db.select().from(subjectsTable)
         .where(eq(subjectsTable.specializationId, specId));
-      const matchSubject = allSubsInSpec.find(s => {
+      const candidates = allSubsInSpec.filter(s => {
         const targetNorm = normalizeName(s.name);
         return targetNorm === subjectNameNorm
           || targetNorm.startsWith(subjectNameNorm)
           || subjectNameNorm.startsWith(targetNorm);
       });
+      if (candidates.length > 1) {
+        const exact = candidates.find(s => normalizeName(s.name) === subjectNameNorm);
+        if (exact) candidates.splice(0, candidates.length, exact);
+      }
+      const matchSubject = candidates[0];
       if (!matchSubject) {
         results.push({ specId, status: "لا توجد مادة بنفس الاسم في هذا التخصص" });
         continue;
