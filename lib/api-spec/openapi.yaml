@@ -644,6 +644,111 @@ paths:
         "204":
           description: Deleted
 
+  /users/{id}/exam-access:
+    get:
+      operationId: getUserExamAccess
+      tags: [users]
+      summary: Get exam access list for a user (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of exam access records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExamAccess"
+
+  /users/{id}/subscription:
+    put:
+      operationId: updateUserSubscription
+      tags: [users]
+      summary: Update subscription status for a user (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscriptionStatus:
+                  type: boolean
+              required:
+                - subscriptionStatus
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/exam-access/{examId}:
+    put:
+      operationId: setUserExamAccess
+      tags: [users]
+      summary: Set exam access for a specific user/exam (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isUnlocked:
+                  type: boolean
+              required:
+                - isUnlocked
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamAccess"
+
+  /users/{id}/unlock-all:
+    post:
+      operationId: unlockAllExamsForUser
+      tags: [users]
+      summary: Unlock all exams for a user (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: All exams unlocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /settings:
     get:
       operationId: getSettings
@@ -714,6 +819,8 @@ components:
           enum: [admin, supervisor, student, guest]
         provider:
           type: ["string", "null"]
+        subscriptionStatus:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -722,6 +829,17 @@ components:
         - name
         - role
         - createdAt
+
+    ExamAccess:
+      type: object
+      properties:
+        examId:
+          type: integer
+        isUnlocked:
+          type: boolean
+      required:
+        - examId
+        - isUnlocked
 
     AuthResponse:
       type: object
@@ -864,6 +982,8 @@ components:
           type: integer
         timeLimit:
           type: ["integer", "null"]
+        isLocked:
+          type: boolean
         createdAt:
           type: string
           format: date-time

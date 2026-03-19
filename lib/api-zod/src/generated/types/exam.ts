@@ -13,5 +13,6 @@ export interface Exam {
   questionCount: number;
   /** @nullable */
   timeLimit?: number | null;
+  isLocked?: boolean;
   createdAt: Date;
 }

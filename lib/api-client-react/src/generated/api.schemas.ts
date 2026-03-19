@@ -34,7 +34,13 @@ export interface User {
   role: UserRole;
   /** @nullable */
   provider?: string | null;
+  subscriptionStatus?: boolean;
   createdAt: string;
+}
+
+export interface ExamAccess {
+  examId: number;
+  isUnlocked: boolean;
 }
 
 export interface AuthResponse {
@@ -99,8 +105,7 @@ export interface Exam {
   questionCount: number;
   /** @nullable */
   timeLimit?: number | null;
-  /** @nullable */
-  questionLimit?: number | null;
+  isLocked?: boolean;
   createdAt: string;
 }
 
@@ -165,8 +170,6 @@ export interface ExamWithQuestions {
   questionCount: number;
   /** @nullable */
   timeLimit?: number | null;
-  /** @nullable */
-  questionLimit?: number | null;
   createdAt: string;
   questions: Question[];
 }
@@ -189,8 +192,6 @@ export interface Answer {
 export interface SubmitExamBody {
   examId: number;
   answers: Answer[];
-  /** @nullable */
-  bookmarkedQuestionIds?: number[] | null;
 }
 
 export interface ExamResult {
@@ -228,14 +229,6 @@ export interface ExamResultDetail {
   percentage: number;
   completedAt: string;
   answers: AnswerDetail[];
-  /** @nullable */
-  bookmarkedQuestions?: string | null;
-  /** @nullable */
-  unitId?: number | null;
-  /** @nullable */
-  subjectId?: number | null;
-  /** @nullable */
-  specializationId?: number | null;
 }
 
 export type UpdateUserBodyRole =
@@ -256,13 +249,11 @@ export interface UpdateUserBody {
 export interface SiteSettings {
   id: number;
   whatsappNumber: string;
-  telegramUsername: string;
   subscriptionInfo: string;
 }
 
 export interface UpdateSettingsBody {
   whatsappNumber: string;
-  telegramUsername: string;
   subscriptionInfo: string;
 }
 
@@ -276,4 +267,12 @@ export type GetUnitsParams = {
 
 export type GetExamsParams = {
   unitId?: number;
+};
+
+export type UpdateUserSubscriptionBody = {
+  subscriptionStatus: boolean;
+};
+
+export type SetUserExamAccessBody = {
+  isUnlocked: boolean;
 };

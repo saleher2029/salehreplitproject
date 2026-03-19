@@ -15,5 +15,6 @@ export interface User {
   role: UserRole;
   /** @nullable */
   provider?: string | null;
+  subscriptionStatus?: boolean;
   createdAt: Date;
 }

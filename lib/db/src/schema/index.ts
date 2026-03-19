@@ -7,3 +7,4 @@ export * from "./exam-target-units";
 export * from "./questions";
 export * from "./results";
 export * from "./settings";
+export * from "./user-exam-access";

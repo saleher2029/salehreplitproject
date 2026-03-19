@@ -26,6 +26,7 @@ import type {
   CreateUnitBody,
   ErrorResponse,
   Exam,
+  ExamAccess,
   ExamResult,
   ExamResultDetail,
   ExamWithQuestions,
@@ -36,6 +37,7 @@ import type {
   LoginBody,
   Question,
   RegisterBody,
+  SetUserExamAccessBody,
   SiteSettings,
   Specialization,
   Subject,
@@ -44,6 +46,7 @@ import type {
   Unit,
   UpdateSettingsBody,
   UpdateUserBody,
+  UpdateUserSubscriptionBody,
   User,
 } from "./api.schemas";
 
@@ -2825,6 +2828,353 @@ export const useDeleteUser = <
   TContext
 > => {
   return useMutation(getDeleteUserMutationOptions(options));
+};
+
+/**
+ * @summary Get exam access list for a user (admin only)
+ */
+export const getGetUserExamAccessUrl = (id: number) => {
+  return `/api/users/${id}/exam-access`;
+};
+
+export const getUserExamAccess = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ExamAccess[]> => {
+  return customFetch<ExamAccess[]>(getGetUserExamAccessUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetUserExamAccessQueryKey = (id: number) => {
+  return [`/api/users/${id}/exam-access`] as const;
+};
+
+export const getGetUserExamAccessQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUserExamAccess>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getUserExamAccess>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetUserExamAccessQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getUserExamAccess>>
+  > = ({ signal }) => getUserExamAccess(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getUserExamAccess>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetUserExamAccessQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getUserExamAccess>>
+>;
+export type GetUserExamAccessQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get exam access list for a user (admin only)
+ */
+
+export function useGetUserExamAccess<
+  TData = Awaited<ReturnType<typeof getUserExamAccess>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getUserExamAccess>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetUserExamAccessQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update subscription status for a user (admin only)
+ */
+export const getUpdateUserSubscriptionUrl = (id: number) => {
+  return `/api/users/${id}/subscription`;
+};
+
+export const updateUserSubscription = async (
+  id: number,
+  updateUserSubscriptionBody: UpdateUserSubscriptionBody,
+  options?: RequestInit,
+): Promise<User> => {
+  return customFetch<User>(getUpdateUserSubscriptionUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateUserSubscriptionBody),
+  });
+};
+
+export const getUpdateUserSubscriptionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserSubscription>>,
+    TError,
+    { id: number; data: BodyType<UpdateUserSubscriptionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateUserSubscription>>,
+  TError,
+  { id: number; data: BodyType<UpdateUserSubscriptionBody> },
+  TContext
+> => {
+  const mutationKey = ["updateUserSubscription"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateUserSubscription>>,
+    { id: number; data: BodyType<UpdateUserSubscriptionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateUserSubscription(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateUserSubscriptionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateUserSubscription>>
+>;
+export type UpdateUserSubscriptionMutationBody =
+  BodyType<UpdateUserSubscriptionBody>;
+export type UpdateUserSubscriptionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update subscription status for a user (admin only)
+ */
+export const useUpdateUserSubscription = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUserSubscription>>,
+    TError,
+    { id: number; data: BodyType<UpdateUserSubscriptionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateUserSubscription>>,
+  TError,
+  { id: number; data: BodyType<UpdateUserSubscriptionBody> },
+  TContext
+> => {
+  return useMutation(getUpdateUserSubscriptionMutationOptions(options));
+};
+
+/**
+ * @summary Set exam access for a specific user/exam (admin only)
+ */
+export const getSetUserExamAccessUrl = (id: number, examId: number) => {
+  return `/api/users/${id}/exam-access/${examId}`;
+};
+
+export const setUserExamAccess = async (
+  id: number,
+  examId: number,
+  setUserExamAccessBody: SetUserExamAccessBody,
+  options?: RequestInit,
+): Promise<ExamAccess> => {
+  return customFetch<ExamAccess>(getSetUserExamAccessUrl(id, examId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(setUserExamAccessBody),
+  });
+};
+
+export const getSetUserExamAccessMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setUserExamAccess>>,
+    TError,
+    { id: number; examId: number; data: BodyType<SetUserExamAccessBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setUserExamAccess>>,
+  TError,
+  { id: number; examId: number; data: BodyType<SetUserExamAccessBody> },
+  TContext
+> => {
+  const mutationKey = ["setUserExamAccess"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setUserExamAccess>>,
+    { id: number; examId: number; data: BodyType<SetUserExamAccessBody> }
+  > = (props) => {
+    const { id, examId, data } = props ?? {};
+
+    return setUserExamAccess(id, examId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetUserExamAccessMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setUserExamAccess>>
+>;
+export type SetUserExamAccessMutationBody = BodyType<SetUserExamAccessBody>;
+export type SetUserExamAccessMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Set exam access for a specific user/exam (admin only)
+ */
+export const useSetUserExamAccess = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setUserExamAccess>>,
+    TError,
+    { id: number; examId: number; data: BodyType<SetUserExamAccessBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setUserExamAccess>>,
+  TError,
+  { id: number; examId: number; data: BodyType<SetUserExamAccessBody> },
+  TContext
+> => {
+  return useMutation(getSetUserExamAccessMutationOptions(options));
+};
+
+/**
+ * @summary Unlock all exams for a user (admin only)
+ */
+export const getUnlockAllExamsForUserUrl = (id: number) => {
+  return `/api/users/${id}/unlock-all`;
+};
+
+export const unlockAllExamsForUser = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getUnlockAllExamsForUserUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getUnlockAllExamsForUserMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlockAllExamsForUser>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unlockAllExamsForUser>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["unlockAllExamsForUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unlockAllExamsForUser>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return unlockAllExamsForUser(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnlockAllExamsForUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unlockAllExamsForUser>>
+>;
+
+export type UnlockAllExamsForUserMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Unlock all exams for a user (admin only)
+ */
+export const useUnlockAllExamsForUser = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlockAllExamsForUser>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unlockAllExamsForUser>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getUnlockAllExamsForUserMutationOptions(options));
 };
 
 /**

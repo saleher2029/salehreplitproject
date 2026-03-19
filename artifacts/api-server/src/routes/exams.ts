@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, examsTable, questionsTable, unitsTable, subjectsTable, examTargetUnitsTable } from "@workspace/db";
+import { db, examsTable, questionsTable, unitsTable, subjectsTable, examTargetUnitsTable, usersTable, userExamAccessTable } from "@workspace/db";
 import { eq, count, and, inArray } from "drizzle-orm";
 import { requireAdmin, optionalAuth } from "../lib/auth";
 import { broadcastChange } from "../sse";
@@ -16,6 +16,27 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+async function computeLockedStatus(userId: number, examIds: number[]): Promise<Map<number, boolean>> {
+  const lockedMap = new Map<number, boolean>();
+  if (examIds.length === 0) return lockedMap;
+
+  const [userRow] = await db.select({ subscriptionStatus: usersTable.subscriptionStatus })
+    .from(usersTable).where(eq(usersTable.id, userId));
+
+  if (userRow?.subscriptionStatus) {
+    examIds.forEach(id => lockedMap.set(id, false));
+    return lockedMap;
+  }
+
+  const accessRows = await db.select()
+    .from(userExamAccessTable)
+    .where(and(eq(userExamAccessTable.userId, userId), inArray(userExamAccessTable.examId, examIds)));
+
+  const unlockedSet = new Set(accessRows.filter(r => r.isUnlocked).map(r => r.examId));
+  examIds.forEach(id => lockedMap.set(id, !unlockedSet.has(id)));
+  return lockedMap;
+}
 
 router.get("/exams", optionalAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
@@ -43,11 +64,25 @@ router.get("/exams", optionalAuth, async (req, res): Promise<void> => {
       ? await db.select().from(examsTable).orderBy(examsTable.id)
       : await db.select().from(examsTable).where(eq(examsTable.isPublished, true)).orderBy(examsTable.id);
   }
+
   const examsWithCount = await Promise.all(exams.map(async (exam) => {
     const [{ count: qCount }] = await db.select({ count: count() }).from(questionsTable).where(eq(questionsTable.examId, exam.id));
     return { ...exam, questionCount: Number(qCount) };
   }));
-  res.json(GetExamsResponse.parse(examsWithCount));
+
+  if (isAdmin) {
+    res.json(GetExamsResponse.parse(examsWithCount.map(e => ({ ...e, isLocked: false }))));
+    return;
+  }
+
+  if (user) {
+    const examIds = examsWithCount.map(e => e.id);
+    const lockedMap = await computeLockedStatus(user.id, examIds);
+    const withLocked = examsWithCount.map(e => ({ ...e, isLocked: lockedMap.get(e.id) ?? true }));
+    res.json(GetExamsResponse.parse(withLocked));
+  } else {
+    res.json(GetExamsResponse.parse(examsWithCount.map(e => ({ ...e, isLocked: true }))));
+  }
 });
 
 router.post("/exams", requireAdmin, async (req, res): Promise<void> => {
@@ -78,6 +113,15 @@ router.get("/exams/:id", optionalAuth, async (req, res): Promise<void> => {
     res.status(404).json({ error: "الاختبار غير موجود" });
     return;
   }
+
+  if (!isAdmin && user) {
+    const lockedMap = await computeLockedStatus(user.id, [exam.id]);
+    if (lockedMap.get(exam.id)) {
+      res.status(403).json({ error: "هذا الاختبار مقفل. يرجى الاشتراك للوصول إليه." });
+      return;
+    }
+  }
+
   const questions = await db.select().from(questionsTable)
     .where(eq(questionsTable.examId, exam.id))
     .orderBy(questionsTable.orderIndex);

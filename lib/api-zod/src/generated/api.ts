@@ -24,6 +24,7 @@ export const LoginAsGuestResponse = zod.object({
     email: zod.string().nullish(),
     role: zod.enum(["admin", "supervisor", "student", "guest"]),
     provider: zod.string().nullish(),
+    subscriptionStatus: zod.boolean().optional(),
     createdAt: zod.date(),
   }),
   token: zod.string(),
@@ -53,6 +54,7 @@ export const LoginWithEmailResponse = zod.object({
     email: zod.string().nullish(),
     role: zod.enum(["admin", "supervisor", "student", "guest"]),
     provider: zod.string().nullish(),
+    subscriptionStatus: zod.boolean().optional(),
     createdAt: zod.date(),
   }),
   token: zod.string(),
@@ -73,6 +75,7 @@ export const LoginAsAdminResponse = zod.object({
     email: zod.string().nullish(),
     role: zod.enum(["admin", "supervisor", "student", "guest"]),
     provider: zod.string().nullish(),
+    subscriptionStatus: zod.boolean().optional(),
     createdAt: zod.date(),
   }),
   token: zod.string(),
@@ -87,6 +90,7 @@ export const GetCurrentUserResponse = zod.object({
   email: zod.string().nullish(),
   role: zod.enum(["admin", "supervisor", "student", "guest"]),
   provider: zod.string().nullish(),
+  subscriptionStatus: zod.boolean().optional(),
   createdAt: zod.date(),
 });
 
@@ -251,8 +255,7 @@ export const GetExamsResponseItem = zod.object({
   unitId: zod.number(),
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
-  questionLimit: zod.number().nullish(),
-  isPublished: zod.boolean(),
+  isLocked: zod.boolean().optional(),
   createdAt: zod.date(),
 });
 export const GetExamsResponse = zod.array(GetExamsResponseItem);
@@ -264,7 +267,6 @@ export const CreateExamBody = zod.object({
   title: zod.string(),
   unitId: zod.number(),
   timeLimit: zod.number().nullish(),
-  questionLimit: zod.number().nullish(),
 });
 
 /**
@@ -280,8 +282,6 @@ export const GetExamResponse = zod.object({
   unitId: zod.number(),
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
-  questionLimit: zod.number().nullish(),
-  isPublished: zod.boolean(),
   createdAt: zod.date(),
   questions: zod.array(
     zod.object({
@@ -290,13 +290,9 @@ export const GetExamResponse = zod.object({
       text: zod.string(),
       imageUrl: zod.string().nullish(),
       optionA: zod.string(),
-      optionAImage: zod.string().nullish(),
       optionB: zod.string(),
-      optionBImage: zod.string().nullish(),
       optionC: zod.string(),
-      optionCImage: zod.string().nullish(),
       optionD: zod.string(),
-      optionDImage: zod.string().nullish(),
       correctOption: zod.enum(["A", "B", "C", "D"]),
       orderIndex: zod.number(),
     }),
@@ -314,7 +310,6 @@ export const UpdateExamBody = zod.object({
   title: zod.string(),
   unitId: zod.number(),
   timeLimit: zod.number().nullish(),
-  questionLimit: zod.number().nullish(),
 });
 
 export const UpdateExamResponse = zod.object({
@@ -323,8 +318,7 @@ export const UpdateExamResponse = zod.object({
   unitId: zod.number(),
   questionCount: zod.number(),
   timeLimit: zod.number().nullish(),
-  questionLimit: zod.number().nullish(),
-  isPublished: zod.boolean(),
+  isLocked: zod.boolean().optional(),
   createdAt: zod.date(),
 });
 
@@ -343,13 +337,9 @@ export const CreateQuestionBody = zod.object({
   text: zod.string(),
   imageUrl: zod.string().nullish(),
   optionA: zod.string(),
-  optionAImage: zod.string().nullish(),
   optionB: zod.string(),
-  optionBImage: zod.string().nullish(),
   optionC: zod.string(),
-  optionCImage: zod.string().nullish(),
   optionD: zod.string(),
-  optionDImage: zod.string().nullish(),
   correctOption: zod.enum(["A", "B", "C", "D"]),
   orderIndex: zod.number(),
 });
@@ -366,13 +356,9 @@ export const UpdateQuestionBody = zod.object({
   text: zod.string(),
   imageUrl: zod.string().nullish(),
   optionA: zod.string(),
-  optionAImage: zod.string().nullish(),
   optionB: zod.string(),
-  optionBImage: zod.string().nullish(),
   optionC: zod.string(),
-  optionCImage: zod.string().nullish(),
   optionD: zod.string(),
-  optionDImage: zod.string().nullish(),
   correctOption: zod.enum(["A", "B", "C", "D"]),
   orderIndex: zod.number(),
 });
@@ -383,13 +369,9 @@ export const UpdateQuestionResponse = zod.object({
   text: zod.string(),
   imageUrl: zod.string().nullish(),
   optionA: zod.string(),
-  optionAImage: zod.string().nullish(),
   optionB: zod.string(),
-  optionBImage: zod.string().nullish(),
   optionC: zod.string(),
-  optionCImage: zod.string().nullish(),
   optionD: zod.string(),
-  optionDImage: zod.string().nullish(),
   correctOption: zod.enum(["A", "B", "C", "D"]),
   orderIndex: zod.number(),
 });
@@ -427,7 +409,6 @@ export const SubmitExamBody = zod.object({
       selectedOption: zod.enum(["A", "B", "C", "D"]),
     }),
   ),
-  bookmarkedQuestionIds: zod.array(zod.number()).optional(),
 });
 
 /**
@@ -441,17 +422,11 @@ export const GetResultResponse = zod.object({
   id: zod.number(),
   examId: zod.number(),
   examTitle: zod.string(),
-  unitId: zod.number().nullish(),
-  subjectId: zod.number().nullish(),
-  specializationId: zod.number().nullish(),
   userId: zod.number(),
   score: zod.number(),
   totalQuestions: zod.number(),
   percentage: zod.number(),
   completedAt: zod.date(),
-  difficulty: zod.string().nullish(),
-  notes: zod.string().nullish(),
-  bookmarkedQuestions: zod.string().nullish(),
   answers: zod.array(
     zod.object({
       questionId: zod.number(),
@@ -461,13 +436,9 @@ export const GetResultResponse = zod.object({
       correctOption: zod.string(),
       isCorrect: zod.boolean(),
       optionA: zod.string(),
-      optionAImage: zod.string().nullish(),
       optionB: zod.string(),
-      optionBImage: zod.string().nullish(),
       optionC: zod.string(),
-      optionCImage: zod.string().nullish(),
       optionD: zod.string(),
-      optionDImage: zod.string().nullish(),
     }),
   ),
 });
@@ -481,6 +452,7 @@ export const GetUsersResponseItem = zod.object({
   email: zod.string().nullish(),
   role: zod.enum(["admin", "supervisor", "student", "guest"]),
   provider: zod.string().nullish(),
+  subscriptionStatus: zod.boolean().optional(),
   createdAt: zod.date(),
 });
 export const GetUsersResponse = zod.array(GetUsersResponseItem);
@@ -503,6 +475,7 @@ export const UpdateUserResponse = zod.object({
   email: zod.string().nullish(),
   role: zod.enum(["admin", "supervisor", "student", "guest"]),
   provider: zod.string().nullish(),
+  subscriptionStatus: zod.boolean().optional(),
   createdAt: zod.date(),
 });
 
@@ -514,12 +487,75 @@ export const DeleteUserParams = zod.object({
 });
 
 /**
+ * @summary Get exam access list for a user (admin only)
+ */
+export const GetUserExamAccessParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetUserExamAccessResponseItem = zod.object({
+  examId: zod.number(),
+  isUnlocked: zod.boolean(),
+});
+export const GetUserExamAccessResponse = zod.array(
+  GetUserExamAccessResponseItem,
+);
+
+/**
+ * @summary Update subscription status for a user (admin only)
+ */
+export const UpdateUserSubscriptionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateUserSubscriptionBody = zod.object({
+  subscriptionStatus: zod.boolean(),
+});
+
+export const UpdateUserSubscriptionResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  email: zod.string().nullish(),
+  role: zod.enum(["admin", "supervisor", "student", "guest"]),
+  provider: zod.string().nullish(),
+  subscriptionStatus: zod.boolean().optional(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Set exam access for a specific user/exam (admin only)
+ */
+export const SetUserExamAccessParams = zod.object({
+  id: zod.coerce.number(),
+  examId: zod.coerce.number(),
+});
+
+export const SetUserExamAccessBody = zod.object({
+  isUnlocked: zod.boolean(),
+});
+
+export const SetUserExamAccessResponse = zod.object({
+  examId: zod.number(),
+  isUnlocked: zod.boolean(),
+});
+
+/**
+ * @summary Unlock all exams for a user (admin only)
+ */
+export const UnlockAllExamsForUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UnlockAllExamsForUserResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
  * @summary Get site settings
  */
 export const GetSettingsResponse = zod.object({
   id: zod.number(),
   whatsappNumber: zod.string(),
-  telegramUsername: zod.string(),
   subscriptionInfo: zod.string(),
 });
 
@@ -528,13 +564,11 @@ export const GetSettingsResponse = zod.object({
  */
 export const UpdateSettingsBody = zod.object({
   whatsappNumber: zod.string(),
-  telegramUsername: zod.string(),
   subscriptionInfo: zod.string(),
 });
 
 export const UpdateSettingsResponse = zod.object({
   id: zod.number(),
   whatsappNumber: zod.string(),
-  telegramUsername: zod.string(),
   subscriptionInfo: zod.string(),
 });

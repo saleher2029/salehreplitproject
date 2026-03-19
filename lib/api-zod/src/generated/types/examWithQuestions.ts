@@ -14,8 +14,6 @@ export interface ExamWithQuestions {
   questionCount: number;
   /** @nullable */
   timeLimit?: number | null;
-  /** @nullable */
-  questionLimit?: number | null;
   createdAt: Date;
   questions: Question[];
 }
