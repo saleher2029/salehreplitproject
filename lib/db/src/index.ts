@@ -4,7 +4,7 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-const dbUrl = process.env.SHARED_DATABASE_URL || process.env.DATABASE_URL;
+const dbUrl = process.env.DATABASE_URL || process.env.SHARED_DATABASE_URL;
 
 if (!dbUrl) {
   throw new Error(
@@ -12,7 +12,8 @@ if (!dbUrl) {
   );
 }
 
-export const pool = new Pool({ connectionString: dbUrl, ssl: process.env.SHARED_DATABASE_URL ? { rejectUnauthorized: false } : undefined });
+const isNeonUrl = dbUrl.includes("neon.tech");
+export const pool = new Pool({ connectionString: dbUrl, ssl: isNeonUrl ? { rejectUnauthorized: false } : undefined });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
