@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "postgresql-16"]
+modules = ["nodejs-20", "web", "bash"]
 
 [[artifacts]]
 id = "artifacts/api-server"
@@ -52,4 +52,3 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-SHARED_DATABASE_URL = "postgresql://neondb_owner:npg_C5yxB8VsebOI@ep-steep-hill-akc10gbc.c-3.us-west-2.aws.neon.tech/neondb?sslmode=require"
