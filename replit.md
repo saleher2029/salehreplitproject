@@ -52,6 +52,20 @@ A full Arabic Tawjihi (high school final exam) practice platform.
 - Password: `tawjihi2024`
 (Configurable via ADMIN_USERNAME and ADMIN_PASSWORD env vars)
 
+## Static Site (Pure Vanilla HTML/CSS/JS)
+
+A fully self-contained static version of the platform lives in `/static/`:
+- `static/index.html` — single HTML shell
+- `static/style.css` — full RTL Arabic styling (emerald #10B77F theme)
+- `static/script.js` — all app logic with mock data (180 questions, 36 exams, 5 specs)
+
+**No backend required** — works by opening `index.html` directly in a browser.
+**Served via Express** at `/static-site/` (direct: `localhost:8080/static-site/`) and
+via the Replit proxy at `/api/static-site/`.
+
+Features: hash-based SPA routing, timer, answer flagging, results with corrections,
+admin panel (admin / tawjihi2024), subscription toggle via localStorage.
+
 ## Structure
 
 ```text
@@ -60,6 +74,10 @@ artifacts-monorepo/
 │   ├── api-server/         # Express API server
 │   ├── tawjihi/            # React + Vite frontend (Arabic RTL)
 │   └── tawjihi-mobile/     # Expo React Native mobile app (Arabic RTL)
+├── static/                 # Standalone static site (no backend)
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
 ├── lib/                    # Shared libraries
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
