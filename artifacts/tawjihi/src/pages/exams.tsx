@@ -1,4 +1,4 @@
-import { useGetExams } from "@workspace/api-client-react";
+import { useGetExams, useGetUserExamAccess } from "@/lib/db";
 import { Link, useSearch } from "wouter";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Exams({ params }: { params: { id: string } }) {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const unitId = parseInt(params.id);
   const search = useSearch();
@@ -16,9 +16,12 @@ export default function Exams({ params }: { params: { id: string } }) {
   const subjectId = sp.get("subjectId");
   const specializationId = sp.get("specializationId");
 
-  const { data, isLoading } = useGetExams({ unitId }, {
-    request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
-  });
+  const { data: accessData } = useGetUserExamAccess(user?.id);
+  const userAccessIds = user?.subscriptionStatus
+    ? undefined
+    : (accessData?.filter((a: any) => a.isUnlocked).map((a: any) => a.examId));
+
+  const { data, isLoading } = useGetExams({ unitId }, user?.subscriptionStatus, userAccessIds);
 
   const handleLockedClick = () => {
     toast({

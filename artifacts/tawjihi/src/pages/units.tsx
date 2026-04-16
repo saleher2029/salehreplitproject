@@ -1,19 +1,15 @@
-import { useGetUnits } from "@workspace/api-client-react";
+import { useGetUnits } from "@/lib/db";
 import { Link, useSearch } from "wouter";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Bookmark, ChevronLeft, ArrowRight } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 
 export default function Units({ params }: { params: { id: string } }) {
-  const { token } = useAuth();
   const subjectId = parseInt(params.id);
   const search = useSearch();
   const specializationId = new URLSearchParams(search).get("specializationId");
-  const { data, isLoading } = useGetUnits({ subjectId }, {
-    request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
-  });
+  const { data, isLoading } = useGetUnits({ subjectId });
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">

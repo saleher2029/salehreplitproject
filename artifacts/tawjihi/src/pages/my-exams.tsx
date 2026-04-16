@@ -1,4 +1,4 @@
-import { useGetMyResults, getGetMyResultsQueryKey } from "@workspace/api-client-react";
+import { useGetMyResults } from "@/lib/db";
 import { Link, useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
@@ -14,12 +14,8 @@ function getGradeColor(pct: number) {
 }
 
 export default function MyExams() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
-
-  const headers: Record<string, string> = token
-    ? { Authorization: `Bearer ${token}` }
-    : {};
 
   const {
     data,
@@ -27,25 +23,9 @@ export default function MyExams() {
     isError,
     refetch,
     isFetching,
-  } = useGetMyResults(
-    {
-      request: { headers },
-      query: {
-        queryKey: getGetMyResultsQueryKey(),
-        // لا تعيد المحاولة عند أخطاء المصادقة — تفادياً لانتظار طويل
-        retry: (failureCount, error: any) => {
-          if (error?.status === 401 || error?.status === 403) return false;
-          return failureCount < 2;
-        },
-        retryDelay: 800,
-        staleTime: 30_000,
-        enabled: !!token,
-      },
-    },
-  );
+  } = useGetMyResults(user?.id);
 
-  // ── المستخدم غير مسجل ────────────────────────────────────────────────────
-  if (!token) {
+  if (!user) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 text-center px-4">
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -62,7 +42,6 @@ export default function MyExams() {
     );
   }
 
-  // ── جاري التحميل ────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex flex-col justify-center items-center h-64 gap-4">
@@ -72,7 +51,6 @@ export default function MyExams() {
     );
   }
 
-  // ── خطأ في التحميل ───────────────────────────────────────────────────────
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
@@ -94,7 +72,6 @@ export default function MyExams() {
     );
   }
 
-  // ── لا توجد امتحانات بعد ────────────────────────────────────────────────
   if (!data || data.length === 0) {
     return (
       <div className="space-y-8 py-6 max-w-5xl mx-auto">
@@ -111,7 +88,6 @@ export default function MyExams() {
     );
   }
 
-  // ── قائمة الامتحانات ─────────────────────────────────────────────────────
   return (
     <div className="space-y-8 py-6 max-w-5xl mx-auto">
       <PageHeader />

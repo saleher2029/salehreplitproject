@@ -1,17 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Layers, Book, FileText, Users } from "lucide-react";
-import { useGetSpecializations, useGetSubjects, useGetExams, useGetUsers } from "@workspace/api-client-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useGetSpecializations, useGetSubjects, useGetExams, useGetUsers } from "@/lib/db";
 
 export default function AdminDashboard() {
-  const { token } = useAuth();
-  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-  const opts = { request: { headers } };
-
-  const { data: specs } = useGetSpecializations(opts);
-  const { data: subjects } = useGetSubjects({}, opts);
-  const { data: exams } = useGetExams({}, opts);
-  const { data: users } = useGetUsers(opts);
+  const { data: specs } = useGetSpecializations();
+  const { data: subjects } = useGetSubjects();
+  const { data: exams } = useGetExams();
+  const { data: users } = useGetUsers();
 
   const stats = [
     {

@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
-import { useGetExams, useCreateQuestion, useUpdateQuestion, useDeleteQuestion, getExam } from "@workspace/api-client-react";
+import { useGetExams, useCreateQuestion, useUpdateQuestion, useDeleteQuestion, fetchExamDetail } from "@/lib/db";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,23 +20,20 @@ function imageToBase64(file: File): Promise<string> {
 }
 
 export default function AdminQuestions() {
-  const { token } = useAuth();
   const queryClient = useQueryClient();
-  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-  const opts = { request: { headers } };
 
-  const { data: exams } = useGetExams({}, opts);
+  const { data: exams } = useGetExams();
   const [selectedExamId, setSelectedExamId] = useState("");
 
   const { data: examDetail, isLoading } = useQuery({
-    queryKey: ["/api/exams", selectedExamId],
-    queryFn: () => getExam(parseInt(selectedExamId), opts.request),
+    queryKey: ["/api/exams", selectedExamId, "detail"],
+    queryFn: () => fetchExamDetail(parseInt(selectedExamId)),
     enabled: !!selectedExamId,
   });
 
-  const createMut = useCreateQuestion(opts);
-  const updateMut = useUpdateQuestion(opts);
-  const deleteMut = useDeleteQuestion(opts);
+  const createMut = useCreateQuestion();
+  const updateMut = useUpdateQuestion();
+  const deleteMut = useDeleteQuestion();
 
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -97,7 +93,7 @@ export default function AdminQuestions() {
     };
 
     const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/exams", selectedExamId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/exams", selectedExamId, "detail"] });
       setIsOpen(false);
     };
 
@@ -111,7 +107,7 @@ export default function AdminQuestions() {
   const handleDelete = (id: number) => {
     if (confirm("هل أنت متأكد من حذف هذا السؤال؟")) {
       deleteMut.mutate({ id }, {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/exams", selectedExamId] }),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/exams", selectedExamId, "detail"] }),
       });
     }
   };

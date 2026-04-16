@@ -1,15 +1,11 @@
-import { useGetSpecializations } from "@workspace/api-client-react";
+import { useGetSpecializations } from "@/lib/db";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Layers, ChevronLeft } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 
 export default function Specializations() {
-  const { token } = useAuth();
-  const { data, isLoading } = useGetSpecializations({
-    request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
-  });
+  const { data, isLoading } = useGetSpecializations();
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">

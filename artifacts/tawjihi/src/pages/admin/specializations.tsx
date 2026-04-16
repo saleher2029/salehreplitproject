@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useGetSpecializations, useCreateSpecialization, useUpdateSpecialization, useDeleteSpecialization } from "@workspace/api-client-react";
+import { useGetSpecializations, useCreateSpecialization, useUpdateSpecialization, useDeleteSpecialization } from "@/lib/db";
 import { useQueryClient } from "@tanstack/react-query";
-import { useApiOpts } from "@/hooks/use-api-opts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -9,12 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 export default function AdminSpecializations() {
   const queryClient = useQueryClient();
-  const options = useApiOpts();
   
-  const { data, isLoading } = useGetSpecializations(options);
-  const createMut = useCreateSpecialization(options);
-  const updateMut = useUpdateSpecialization(options);
-  const deleteMut = useDeleteSpecialization(options);
+  const { data, isLoading } = useGetSpecializations();
+  const createMut = useCreateSpecialization();
+  const updateMut = useUpdateSpecialization();
+  const deleteMut = useDeleteSpecialization();
 
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);

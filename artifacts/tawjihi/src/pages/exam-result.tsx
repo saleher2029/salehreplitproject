@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetResult } from "@workspace/api-client-react";
+import { useGetResult, updateResultFeedback } from "@/lib/db";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import {
   CheckCircle2, XCircle, Trophy, ArrowRight, Star,
   Bookmark, MessageSquare, ThumbsUp,
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 function getGrade(pct: number): { label: string; color: string; bg: string; border: string } {
@@ -45,12 +44,9 @@ const DIFFICULTY_OPTIONS = [
 ] as const;
 
 export default function ExamResult({ params }: { params: { id: string } }) {
-  const { token } = useAuth();
   const resultId = parseInt(params.id);
-  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-  const { data: result, isLoading } = useGetResult(resultId, { request: { headers } });
+  const { data: result, isLoading } = useGetResult(resultId);
 
-  // ── Feedback state ────────────────────────────────────────────────────────
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
@@ -60,10 +56,9 @@ export default function ExamResult({ params }: { params: { id: string } }) {
     if (!selectedDifficulty && !notes.trim()) return;
     setFeedbackLoading(true);
     try {
-      await fetch(`${import.meta.env.BASE_URL}api/results/${resultId}/feedback`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ difficulty: selectedDifficulty || undefined, notes: notes.trim() || undefined }),
+      await updateResultFeedback(resultId, {
+        difficulty: selectedDifficulty || undefined,
+        notes: notes.trim() || undefined,
       });
       setFeedbackSent(true);
     } catch {}
@@ -82,7 +77,6 @@ export default function ExamResult({ params }: { params: { id: string } }) {
   const GRADE_LABELS = isEng ? GRADE_LABELS_EN : GRADE_LABELS_AR;
   const wrongAnswers = result.answers.filter(a => !a.isCorrect);
 
-  // Parse bookmarked question IDs
   let bookmarkedIds: number[] = [];
   try { if (result.bookmarkedQuestions) bookmarkedIds = JSON.parse(result.bookmarkedQuestions); } catch {}
 
@@ -174,7 +168,6 @@ export default function ExamResult({ params }: { params: { id: string } }) {
                 <h3 className="text-lg font-bold font-serif">تقييم الاختبار وملاحظاتك</h3>
               </div>
 
-              {/* Difficulty */}
               <div className="space-y-2">
                 <p className="text-sm font-bold text-muted-foreground">ما مستوى صعوبة هذا الاختبار؟</p>
                 <div className="grid grid-cols-3 gap-3">
@@ -195,7 +188,6 @@ export default function ExamResult({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
-              {/* Notes */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-muted-foreground flex items-center gap-1.5">
                   <MessageSquare className="w-4 h-4" /> ملاحظاتك (اختياري)

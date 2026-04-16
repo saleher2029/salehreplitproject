@@ -2,10 +2,11 @@ import { useState, useRef } from "react";
 import {
   useGetExams, useGetSpecializations, useGetSubjects, useGetUnits,
   useCreateExam, useUpdateExam, useDeleteExam,
-  useCreateQuestion, useUpdateQuestion, useDeleteQuestion, getExam,
-} from "@workspace/api-client-react";
+  useCreateQuestion, useUpdateQuestion, useDeleteQuestion,
+  useGetAllExamTargetUnits,
+  fetchExamDetail, appendExamToSpecs, toggleExamPublish,
+} from "@/lib/db";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,40 +30,27 @@ function imageToBase64(file: File): Promise<string> {
 }
 
 export default function AdminExams() {
-  const { token } = useAuth();
   const queryClient = useQueryClient();
-  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-  const opts = { request: { headers } };
 
-  const { data: exams, isLoading } = useGetExams({}, opts);
-  const { data: specializations } = useGetSpecializations(opts);
-  const { data: allSubjects } = useGetSubjects({}, opts);
-  const { data: allUnits } = useGetUnits({}, opts);
+  const { data: exams, isLoading } = useGetExams();
+  const { data: specializations } = useGetSpecializations();
+  const { data: allSubjects } = useGetSubjects();
+  const { data: allUnits } = useGetUnits();
+  const { data: examTargetLinks } = useGetAllExamTargetUnits();
 
-  const { data: examTargetLinks } = useQuery({
-    queryKey: ["exam-target-links"],
-    queryFn: async () => {
-      const res = await fetch("/api/exam-target-units", { headers });
-      if (!res.ok) return {} as Record<number, number[]>;
-      return res.json() as Promise<Record<number, number[]>>;
-    },
-  });
+  const createExamMut = useCreateExam();
+  const updateExamMut = useUpdateExam();
+  const deleteExamMut = useDeleteExam();
+  const createQMut = useCreateQuestion();
+  const updateQMut = useUpdateQuestion();
+  const deleteQMut = useDeleteQuestion();
 
-  const createExamMut = useCreateExam(opts);
-  const updateExamMut = useUpdateExam(opts);
-  const deleteExamMut = useDeleteExam(opts);
-  const createQMut = useCreateQuestion(opts);
-  const updateQMut = useUpdateQuestion(opts);
-  const deleteQMut = useDeleteQuestion(opts);
-
-  // Dialog phase: "exam" = filling exam info, "questions" = adding questions
   const [phase, setPhase] = useState<"exam" | "questions">("exam");
   const [isOpen, setIsOpen] = useState(false);
   const [editingExamId, setEditingExamId] = useState<number | null>(null);
-  const [activeExamId, setActiveExamId] = useState<number | null>(null); // exam we're adding questions to
+  const [activeExamId, setActiveExamId] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Exam form state
   const [selectedSpecIds, setSelectedSpecIds] = useState<number[]>([]);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   const [unitId, setUnitId] = useState("");
@@ -71,7 +59,6 @@ export default function AdminExams() {
   const [questionLimit, setQuestionLimit] = useState("");
   const [duplicateStatus, setDuplicateStatus] = useState<string | null>(null);
 
-  // Question form state
   const [editingQId, setEditingQId] = useState<number | null>(null);
   const [qText, setQText] = useState("");
   const [qImageUrl, setQImageUrl] = useState<string | null>(null);
@@ -129,14 +116,12 @@ export default function AdminExams() {
     return selectedSpecIds[0] ?? null;
   })();
 
-  // Fetch questions for active exam
   const { data: activeExam, refetch: refetchExam } = useQuery({
     queryKey: ["/api/exams", String(activeExamId)],
-    queryFn: () => getExam(activeExamId!, opts.request),
+    queryFn: () => fetchExamDetail(activeExamId!),
     enabled: !!activeExamId,
   });
 
-  // ─── Open exam create dialog ────────────────────────────────────────────────
   const openCreate = () => {
     setEditingExamId(null);
     setActiveExamId(null);
@@ -147,7 +132,6 @@ export default function AdminExams() {
     setIsOpen(true);
   };
 
-  // ─── Open exam edit dialog (stays in exam phase) ────────────────────────────
   const openEdit = (item: any) => {
     setEditingExamId(item.id);
     setActiveExamId(item.id);
@@ -183,7 +167,6 @@ export default function AdminExams() {
     setIsOpen(true);
   };
 
-  // ─── Open question management for existing exam directly ────────────────────
   const openQuestionsFor = (item: any) => {
     setActiveExamId(item.id);
     setEditingExamId(null);
@@ -193,7 +176,6 @@ export default function AdminExams() {
   };
 
   const [isDuplicating, setIsDuplicating] = useState(false);
-
   const [publishExam, setPublishExam] = useState<any>(null);
   const [publishSpecIds, setPublishSpecIds] = useState<number[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -229,7 +211,6 @@ export default function AdminExams() {
     const subject = allSubjects.find(s => s.id === unit.subjectId);
     if (!subject) return [];
     const examSpecId = subject.specializationId;
-    const subjectNN = normName(subject.name);
     const unitNN = normName(unit.name);
     const linkedUnitIds = new Set(examTargetLinks?.[exam.id] ?? []);
     return specializations.filter(spec => {
@@ -250,24 +231,24 @@ export default function AdminExams() {
   };
 
   const handlePublish = async () => {
-    if (!publishExam || publishSpecIds.length === 0) return;
+    if (!publishExam || publishSpecIds.length === 0 || !allUnits || !allSubjects) return;
     setIsPublishing(true);
     setPublishResult(null);
     try {
-      const res = await fetch(`/api/exams/${publishExam.id}/link-to-specs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ specializationIds: publishSpecIds }),
+      const results = await appendExamToSpecs({
+        examId: publishExam.id,
+        specIds: publishSpecIds,
+        examUnitId: publishExam.unitId,
+        allUnits: allUnits,
+        allSubjects: allSubjects,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل النشر");
-      const successCount = data.results?.filter((r: any) => r.unitId).length ?? 0;
-      const failedResults = data.results?.filter((r: any) => !r.unitId) ?? [];
+      const successCount = results.filter(r => r.unitId !== null).length;
+      const failedResults = results.filter(r => r.unitId === null);
       let msg = `✓ تم ربط الاختبار بـ ${successCount} تخصص بنجاح`;
       if (failedResults.length > 0) {
-        const specNames = failedResults.map((r: any) => {
+        const specNames = failedResults.map(r => {
           const spec = specializations?.find(s => s.id === r.specId);
-          return `${spec?.name || r.specId}: ${r.status}`;
+          return `${spec?.name || r.specId}: لم يتم العثور على وحدة مطابقة`;
         });
         msg += ` | ⚠ ${specNames.join("، ")}`;
       }
@@ -282,25 +263,112 @@ export default function AdminExams() {
     }
   };
 
+  const derivedSpecIds = (() => {
+    if (!allSubjects) return [];
+    const specIds = new Set<number>();
+    for (const sid of selectedSubjectIds) {
+      const sub = allSubjects.find(s => s.id === sid);
+      if (sub) specIds.add(sub.specializationId);
+    }
+    return [...specIds];
+  })();
+
+  const linkToOtherSpecs = async (examId: number, examUnitId: number) => {
+    if (derivedSpecIds.length <= 1 || !primarySpecId || !allUnits || !allSubjects) return;
+    const otherSpecIds = derivedSpecIds.filter(id => id !== primarySpecId);
+    const alreadyLinkedSpecIds = new Set<number>();
+    const linkedUnitIds = examTargetLinks?.[examId] ?? [];
+    for (const luid of linkedUnitIds) {
+      const lu = allUnits?.find(u => u.id === luid);
+      if (!lu) continue;
+      const ls = allSubjects?.find(s => s.id === lu.subjectId);
+      if (ls) alreadyLinkedSpecIds.add(ls.specializationId);
+    }
+    const newSpecIds = otherSpecIds.filter(id => !alreadyLinkedSpecIds.has(id));
+    if (newSpecIds.length > 0) {
+      try {
+        const results = await appendExamToSpecs({
+          examId,
+          specIds: newSpecIds,
+          examUnitId,
+          allUnits: allUnits!,
+          allSubjects: allSubjects!,
+        });
+        const successCount = results.filter(r => r.unitId !== null).length;
+        if (successCount > 0) setDuplicateStatus(`✓ تم ربط الاختبار بـ ${successCount} مادة إضافية`);
+        queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
+      } catch {}
+    }
+  };
+
+  const handleSaveExam = () => {
+    if (!title.trim() || !unitId) return;
+    setSaveError(null);
+    const examUnitId = parseInt(unitId);
+    const data = {
+      title,
+      unitId: examUnitId,
+      timeLimit: timeLimit ? parseInt(timeLimit) : null,
+      questionLimit: questionLimit ? parseInt(questionLimit) : null,
+    };
+
+    if (editingExamId) {
+      updateExamMut.mutate({ id: editingExamId, data }, {
+        onSuccess: async () => {
+          queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+          await linkToOtherSpecs(editingExamId, examUnitId);
+          setPhase("questions");
+          resetQForm();
+        },
+        onError: (err: any) => {
+          setSaveError(err?.message || "فشل حفظ الاختبار — تحقق من صلاحياتك أو حاول مجدداً");
+        },
+      });
+    } else {
+      createExamMut.mutate({ data }, {
+        onSuccess: async (created) => {
+          queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
+          setActiveExamId(created.id);
+          setEditingExamId(created.id);
+          await linkToOtherSpecs(created.id, examUnitId);
+          setPhase("questions");
+          resetQForm();
+        },
+        onError: (err: any) => {
+          setSaveError(err?.message || "فشل إنشاء الاختبار — تحقق من صلاحياتك أو حاول مجدداً");
+        },
+      });
+    }
+  };
+
+  const handleDeleteExam = (id: number) => {
+    if (confirm("هل أنت متأكد من حذف هذا الامتحان وجميع أسئلته؟")) {
+      deleteExamMut.mutate({ id }, {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/exams"] }),
+      });
+    }
+  };
+
   const handleFinishExam = async () => {
-    if (activeExamId && derivedSpecIds.length > 1 && primarySpecId) {
+    if (activeExamId && derivedSpecIds.length > 1 && primarySpecId && allUnits && allSubjects) {
       const otherSpecIds = derivedSpecIds.filter(id => id !== primarySpecId);
       setIsDuplicating(true);
       try {
-        const res = await fetch(`/api/exams/${activeExamId}/link-to-specs`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ specializationIds: otherSpecIds }),
+        const examUnitId = (parseInt(unitId) || allUnits.find(u => u.id === (activeExam as any)?.unitId)?.id) ?? 0;
+        const results = await appendExamToSpecs({
+          examId: activeExamId,
+          specIds: otherSpecIds,
+          examUnitId,
+          allUnits: allUnits!,
+          allSubjects: allSubjects!,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "فشل الربط");
-        const successCount = data.results?.filter((r: any) => r.unitId).length ?? 0;
-        const failedResults = data.results?.filter((r: any) => !r.unitId) ?? [];
+        const successCount = results.filter(r => r.unitId !== null).length;
+        const failedResults = results.filter(r => r.unitId === null);
         let msg = `✓ تم ربط الاختبار بـ ${successCount} مادة إضافية بنجاح`;
         if (failedResults.length > 0) {
-          const specNames = failedResults.map((r: any) => {
+          const specNames = failedResults.map(r => {
             const spec = specializations?.find(s => s.id === r.specId);
-            return `${spec?.name || r.specId}: ${r.status}`;
+            return `${spec?.name || r.specId}: لم يتم العثور على وحدة مطابقة`;
           });
           msg += `\n⚠ تعذر الربط: ${specNames.join("، ")}`;
         }
@@ -329,104 +397,11 @@ export default function AdminExams() {
 
   const handleTogglePublish = async (examId: number, currentlyPublished: boolean) => {
     try {
-      await fetch(`/api/exams/${examId}/publish`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ isPublished: !currentlyPublished }),
-      });
+      await toggleExamPublish(examId, !currentlyPublished);
       queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
     } catch {}
   };
 
-  const derivedSpecIds = (() => {
-    if (!allSubjects) return [];
-    const specIds = new Set<number>();
-    for (const sid of selectedSubjectIds) {
-      const sub = allSubjects.find(s => s.id === sid);
-      if (sub) specIds.add(sub.specializationId);
-    }
-    return [...specIds];
-  })();
-
-  // ─── Save exam (create or edit) ─────────────────────────────────────────────
-  const handleSaveExam = () => {
-    if (!title.trim() || !unitId) return;
-    setSaveError(null);
-    const data = {
-      title,
-      unitId: parseInt(unitId),
-      timeLimit: timeLimit ? parseInt(timeLimit) : null,
-      questionLimit: questionLimit ? parseInt(questionLimit) : null,
-    };
-
-    const linkToOtherSpecs = async (examId: number) => {
-      if (derivedSpecIds.length <= 1 || !primarySpecId) return;
-      const otherSpecIds = derivedSpecIds.filter(id => id !== primarySpecId);
-      const alreadyLinkedSpecIds = new Set<number>();
-      const linkedUnitIds = examTargetLinks?.[examId] ?? [];
-      for (const luid of linkedUnitIds) {
-        const lu = allUnits?.find(u => u.id === luid);
-        if (!lu) continue;
-        const ls = allSubjects?.find(s => s.id === lu.subjectId);
-        if (ls) alreadyLinkedSpecIds.add(ls.specializationId);
-      }
-      const newSpecIds = otherSpecIds.filter(id => !alreadyLinkedSpecIds.has(id));
-      if (newSpecIds.length > 0) {
-        try {
-          const res = await fetch(`/api/exams/${examId}/link-to-specs`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-            body: JSON.stringify({ specializationIds: newSpecIds }),
-          });
-          const linkData = await res.json();
-          if (res.ok) {
-            const successCount = linkData.results?.filter((r: any) => r.unitId).length ?? 0;
-            if (successCount > 0) setDuplicateStatus(`✓ تم ربط الاختبار بـ ${successCount} مادة إضافية`);
-          }
-          queryClient.invalidateQueries({ queryKey: ["exam-target-links"] });
-        } catch {}
-      }
-    };
-
-    if (editingExamId) {
-      updateExamMut.mutate({ id: editingExamId, data }, {
-        onSuccess: async () => {
-          queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
-          await linkToOtherSpecs(editingExamId);
-          setPhase("questions");
-          resetQForm();
-        },
-        onError: (err: any) => {
-          setSaveError(err?.message || "فشل حفظ الاختبار — تحقق من صلاحياتك أو حاول مجدداً");
-        },
-      });
-    } else {
-      createExamMut.mutate({ data }, {
-        onSuccess: async (created) => {
-          queryClient.invalidateQueries({ queryKey: ["/api/exams"] });
-          setActiveExamId(created.id);
-          setEditingExamId(created.id);
-          await linkToOtherSpecs(created.id);
-          setPhase("questions");
-          resetQForm();
-        },
-        onError: (err: any) => {
-          setSaveError(err?.message || "فشل إنشاء الاختبار — تحقق من صلاحياتك أو حاول مجدداً");
-        },
-      });
-    }
-  };
-
-  // ─── Delete exam ─────────────────────────────────────────────────────────────
-  const handleDeleteExam = (id: number) => {
-    if (confirm("هل أنت متأكد من حذف هذا الامتحان وجميع أسئلته؟")) {
-      deleteExamMut.mutate({ id }, {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/exams"] }),
-      });
-    }
-  };
-
-  // ─── Question form helpers ───────────────────────────────────────────────────
   const resetQForm = () => {
     setEditingQId(null);
     setQText(""); setQImageUrl(null);
@@ -478,14 +453,11 @@ export default function AdminExams() {
       optionD: qOptions[3] || " ", optionDImage: qOptionImages[3] ?? null,
       correctOption: qCorrect,
       orderIndex: editingQId
-        ? (activeExam?.questions?.find(q => q.id === editingQId)?.orderIndex ?? 0)
+        ? (activeExam?.questions?.find((q: any) => q.id === editingQId)?.orderIndex ?? 0)
         : (activeExam?.questions?.length ?? 0),
     };
 
-    const afterSave = () => {
-      refetchExam();
-      resetQForm();
-    };
+    const afterSave = () => { refetchExam(); resetQForm(); };
 
     if (editingQId) {
       updateQMut.mutate({ id: editingQId, data }, { onSuccess: afterSave });
@@ -505,7 +477,6 @@ export default function AdminExams() {
 
   return (
     <div className="space-y-6">
-      {/* Duplicate status banner */}
       {duplicateStatus && (
         <div className="p-4 rounded-xl bg-primary/10 text-primary text-sm font-medium border border-primary/20 whitespace-pre-line flex items-start justify-between gap-3">
           <span>{duplicateStatus}</span>
@@ -515,7 +486,6 @@ export default function AdminExams() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold font-serif">إدارة الامتحانات</h1>
         <Button onClick={openCreate} className="rounded-xl font-bold">
@@ -523,7 +493,6 @@ export default function AdminExams() {
         </Button>
       </div>
 
-      {/* ── Dialog ─────────────────────────────────────────────────────────── */}
       <Dialog open={isOpen} onOpenChange={open => { if (!open) closeDialog(); }}>
         <DialogContent
           className={`${phase === "questions" ? "sm:max-w-[780px]" : "sm:max-w-[500px]"} max-h-[90vh] overflow-y-auto transition-all duration-300`}
@@ -538,11 +507,10 @@ export default function AdminExams() {
               )}
               {phase === "exam"
                 ? (editingExamId ? "تعديل بيانات الاختبار" : "إنشاء اختبار جديد")
-                : `إضافة أسئلة — ${activeExam?.title ?? "..."}`}
+                : `إضافة أسئلة — ${(activeExam as any)?.title ?? "..."}`}
             </DialogTitle>
           </DialogHeader>
 
-          {/* ── Phase 1: Exam Info ───────────────────────────────────────────── */}
           {phase === "exam" && (
             <div className="space-y-5 py-4">
               <div className="space-y-2">
@@ -697,17 +665,15 @@ export default function AdminExams() {
             </div>
           )}
 
-          {/* ── Phase 2: Questions ───────────────────────────────────────────── */}
           {phase === "questions" && (
             <div className="py-4 space-y-6">
-              {/* Questions list */}
-              {(activeExam?.questions?.length ?? 0) > 0 && (
+              {((activeExam as any)?.questions?.length ?? 0) > 0 && (
                 <div className="space-y-2">
                   <h3 className="text-sm font-bold text-muted-foreground">
-                    الأسئلة المضافة ({activeExam?.questions?.length})
+                    الأسئلة المضافة ({(activeExam as any)?.questions?.length})
                   </h3>
                   <div className="border border-border rounded-xl overflow-hidden divide-y divide-border">
-                    {activeExam?.questions?.map((q, i) => (
+                    {(activeExam as any)?.questions?.map((q: any, i: number) => (
                       <div key={q.id} className={`flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors ${editingQId === q.id ? "bg-primary/5 border-r-2 border-r-primary" : ""}`}>
                         <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                           {i + 1}
@@ -732,14 +698,12 @@ export default function AdminExams() {
                 </div>
               )}
 
-              {/* Question form */}
               <div className="space-y-4 bg-muted/20 rounded-2xl p-4 border border-border">
                 <h3 className="text-sm font-bold flex items-center gap-2">
                   <Plus className="w-4 h-4 text-primary" />
                   {editingQId ? "تعديل السؤال" : "إضافة سؤال جديد"}
                 </h3>
 
-                {/* Question text */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-muted-foreground">نص السؤال</label>
                   <Textarea value={qText} onChange={e => setQText(e.target.value)}
@@ -747,7 +711,6 @@ export default function AdminExams() {
                     className="rounded-xl resize-none text-sm" rows={2} />
                 </div>
 
-                {/* Image upload */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
                     <ImagePlus className="w-3 h-3" /> صورة السؤال (اختياري)
@@ -769,7 +732,6 @@ export default function AdminExams() {
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                 </div>
 
-                {/* Options */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-muted-foreground">
                     الخيارات الأربعة — انقر الدائرة لتعيين الإجابة الصحيحة
@@ -816,7 +778,6 @@ export default function AdminExams() {
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div className="flex gap-2 pt-1">
                   <Button onClick={handleSaveQuestion} disabled={!canSaveQ || isSavingQ}
                     className="flex-1 h-10 rounded-xl font-bold text-sm">
@@ -830,7 +791,6 @@ export default function AdminExams() {
                 </div>
               </div>
 
-              {/* Done button */}
               <div className="space-y-3 pt-2 border-t border-border">
                 {derivedSpecIds.length > 1 && (
                   <div className="p-3 rounded-xl bg-secondary/10 text-secondary text-sm font-medium border border-secondary/20 flex items-center gap-2">
@@ -858,7 +818,6 @@ export default function AdminExams() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Exams Table ─────────────────────────────────────────────────────── */}
       <div className="border border-border rounded-2xl overflow-hidden bg-background">
         <div className="overflow-x-auto">
         <table className="w-full min-w-[750px] text-sm text-right">

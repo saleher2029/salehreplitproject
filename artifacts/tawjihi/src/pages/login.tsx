@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useLoginAsGuest, useLoginAsAdmin, useRegisterWithEmail, useLoginWithEmail } from "@workspace/api-client-react";
-import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -18,69 +17,70 @@ export default function Login() {
   const [adminUsername, setAdminUsername] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [isPending, setIsPending] = useState(false);
 
-  const { setAuth } = useAuth();
   const [, setLocation] = useLocation();
 
-  const guestMutation = useLoginAsGuest();
-  const adminMutation = useLoginAsAdmin();
-  const registerMutation = useRegisterWithEmail();
-  const loginMutation = useLoginWithEmail();
-
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
     setErrorMsg("");
-    guestMutation.mutate(undefined, {
-      onSuccess: (data) => {
-        setAuth(data.user, data.token);
-        setLocation("/");
-      },
-    });
+    setIsPending(true);
+    const { error } = await supabase.auth.signInAnonymously();
+    setIsPending(false);
+    if (error) return setErrorMsg("فشل الدخول كضيف، حاول مرة أخرى");
+    setLocation("/");
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    loginMutation.mutate({ data: { email, password } }, {
-      onSuccess: (data) => {
-        setAuth(data.user, data.token);
-        setLocation("/");
-      },
-      onError: (err: any) => {
-        setErrorMsg(err?.data?.error || "البريد الإلكتروني أو كلمة المرور غير صحيحة");
-      },
-    });
+    setIsPending(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setIsPending(false);
+    if (error) return setErrorMsg("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+    setLocation("/");
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     if (password.length < 6) {
       setErrorMsg("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
       return;
     }
-    registerMutation.mutate({ data: { name, email, password } }, {
-      onSuccess: (data) => {
-        setAuth(data.user, data.token);
-        setLocation("/");
-      },
-      onError: (err: any) => {
-        setErrorMsg(err?.data?.error || "حدث خطأ، يرجى المحاولة مرة أخرى");
-      },
+    setIsPending(true);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
     });
+    setIsPending(false);
+    if (error) return setErrorMsg(error.message || "حدث خطأ، يرجى المحاولة مرة أخرى");
+    setLocation("/");
   };
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    adminMutation.mutate({ data: { username: adminUsername, password: adminPassword } }, {
-      onSuccess: (data) => {
-        setAuth(data.user, data.token);
-        setLocation("/admin");
-      },
-      onError: () => {
-        setErrorMsg("بيانات الدخول غير صحيحة");
-      },
+    setIsPending(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: adminUsername,
+      password: adminPassword,
     });
+    if (error) {
+      setIsPending(false);
+      return setErrorMsg("بيانات الدخول غير صحيحة");
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+    setIsPending(false);
+    if (!profile || (profile.role !== "admin" && profile.role !== "supervisor")) {
+      await supabase.auth.signOut();
+      return setErrorMsg("ليس لديك صلاحيات الوصول للوحة التحكم");
+    }
+    setLocation("/admin");
   };
 
   const resetForm = (newMode: Mode) => {
@@ -126,11 +126,11 @@ export default function Login() {
               <motion.div key="main" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                 <Button
                   onClick={handleGuestLogin}
-                  disabled={guestMutation.isPending}
+                  disabled={isPending}
                   className="w-full h-14 text-lg font-bold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
                 >
                   <User className="ml-2 w-5 h-5" />
-                  {guestMutation.isPending ? "جاري الدخول..." : "الدخول كضيف"}
+                  {isPending ? "جاري الدخول..." : "الدخول كضيف"}
                 </Button>
 
                 <div className="relative py-3">
@@ -190,8 +190,8 @@ export default function Login() {
                 {errorMsg && (
                   <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm font-bold text-center border border-destructive/20">{errorMsg}</div>
                 )}
-                <Button type="submit" disabled={loginMutation.isPending} className="w-full h-12 text-base font-bold rounded-xl">
-                  {loginMutation.isPending ? "جاري الدخول..." : "دخول"}
+                <Button type="submit" disabled={isPending} className="w-full h-12 text-base font-bold rounded-xl">
+                  {isPending ? "جاري الدخول..." : "دخول"}
                   <LogIn className="mr-2 w-5 h-5" />
                 </Button>
                 <div className="text-center space-y-2 pt-2">
@@ -230,8 +230,8 @@ export default function Login() {
                 {errorMsg && (
                   <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm font-bold text-center border border-destructive/20">{errorMsg}</div>
                 )}
-                <Button type="submit" disabled={registerMutation.isPending} className="w-full h-12 text-base font-bold rounded-xl">
-                  {registerMutation.isPending ? "جاري الإنشاء..." : "إنشاء الحساب"}
+                <Button type="submit" disabled={isPending} className="w-full h-12 text-base font-bold rounded-xl">
+                  {isPending ? "جاري الإنشاء..." : "إنشاء الحساب"}
                   <UserPlus className="mr-2 w-5 h-5" />
                 </Button>
                 <div className="text-center space-y-2 pt-2">
@@ -265,8 +265,8 @@ export default function Login() {
                 {errorMsg && (
                   <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm font-bold text-center border border-destructive/20">{errorMsg}</div>
                 )}
-                <Button type="submit" disabled={adminMutation.isPending} className="w-full h-12 text-lg font-bold rounded-xl bg-secondary hover:bg-secondary/90 text-secondary-foreground">
-                  {adminMutation.isPending ? "جاري الدخول..." : "دخول"}
+                <Button type="submit" disabled={isPending} className="w-full h-12 text-lg font-bold rounded-xl bg-secondary hover:bg-secondary/90 text-secondary-foreground">
+                  {isPending ? "جاري الدخول..." : "دخول"}
                   <Lock className="mr-2 w-5 h-5" />
                 </Button>
                 <div className="text-center mt-4">

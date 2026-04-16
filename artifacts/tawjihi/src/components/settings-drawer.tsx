@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useGetSettings } from "@workspace/api-client-react";
-import { useApiOpts } from "@/hooks/use-api-opts";
+import { useGetSettings } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,13 +25,11 @@ import { useLocation } from "wouter";
 type Props = { open: boolean; onOpenChange: (v: boolean) => void };
 
 export function SettingsDrawer({ open, onOpenChange }: Props) {
-  const { user, token, clearAuth, updateUser } = useAuth();
-  const opts = useApiOpts();
+  const { user, clearAuth, updateUser } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: settings } = useGetSettings(opts);
+  const { data: settings } = useGetSettings();
 
-  // ── Edit name ──────────────────────────────────────────────────────────────
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [nameSaving, setNameSaving] = useState(false);
@@ -50,14 +48,12 @@ export function SettingsDrawer({ open, onOpenChange }: Props) {
     if (trimmed.length < 2) { setNameError("الاسم يجب أن يكون حرفين على الأقل"); return; }
     setNameSaving(true); setNameError("");
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/auth/profile`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: trimmed }),
-      });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      updateUser({ name: updated.name });
+      const { error } = await supabase
+        .from("profiles")
+        .update({ name: trimmed })
+        .eq("id", user?.id);
+      if (error) throw error;
+      updateUser({ name: trimmed });
       setEditingName(false);
       setNameSuccess(true);
       setTimeout(() => setNameSuccess(false), 3000);
@@ -68,7 +64,6 @@ export function SettingsDrawer({ open, onOpenChange }: Props) {
     }
   };
 
-  // ── Forgot password ────────────────────────────────────────────────────────
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState("");
@@ -77,17 +72,11 @@ export function SettingsDrawer({ open, onOpenChange }: Props) {
     if (!user?.email) return;
     setResetLoading(true); setResetError("");
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/auth/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email }),
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (error) throw error;
       setResetSent(true);
-      if (data.devLink) {
-        console.info("[Dev] Reset link:", data.devLink);
-      }
     } catch (e: any) {
       setResetError(e.message || "حدث خطأ، يرجى المحاولة مرة أخرى");
     } finally {
@@ -95,15 +84,8 @@ export function SettingsDrawer({ open, onOpenChange }: Props) {
     }
   };
 
-  // ── Logout ─────────────────────────────────────────────────────────────────
   const handleLogout = async () => {
-    try {
-      await fetch(`${import.meta.env.BASE_URL}api/auth/logout`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch {}
-    clearAuth();
+    await clearAuth();
     onOpenChange(false);
     setLocation("/login");
   };

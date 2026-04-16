@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
+import { useGetSettings, useUpdateSettings } from "@/lib/db";
 import { useQueryClient } from "@tanstack/react-query";
-import { useApiOpts } from "@/hooks/use-api-opts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -9,10 +8,9 @@ import { MessageCircle, Send, Save } from "lucide-react";
 
 export default function AdminSettings() {
   const queryClient = useQueryClient();
-  const options = useApiOpts();
 
-  const { data: settings, isLoading } = useGetSettings(options);
-  const updateMut = useUpdateSettings(options);
+  const { data: settings, isLoading } = useGetSettings();
+  const updateMut = useUpdateSettings();
 
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [telegramUsername, setTelegramUsername] = useState("");

@@ -1,5 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { User, getCurrentUser } from "@workspace/api-client-react";
+import { supabase } from "@/lib/supabase";
+import type { Profile } from "@/lib/db";
+
+export type User = Profile;
 
 type AuthContextType = {
   user: User | null;
@@ -12,60 +15,68 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function safeLocalStorage() {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-function getStoredToken(): string | null {
-  try {
-    return safeLocalStorage()?.getItem("tawjihi_token") ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function setStoredToken(t: string) {
-  try { safeLocalStorage()?.setItem("tawjihi_token", t); } catch {}
-}
-
-function removeStoredToken() {
-  try { safeLocalStorage()?.removeItem("tawjihi_token"); } catch {}
+async function fetchProfile(userId: string): Promise<User | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+  if (error || !data) return null;
+  const row = data as any;
+  return {
+    id: row.id,
+    name: row.name ?? "",
+    email: row.email ?? null,
+    role: row.role ?? "student",
+    subscriptionStatus: row.subscription_status ?? false,
+    provider: row.provider ?? "email",
+    createdAt: row.created_at ?? new Date().toISOString(),
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(getStoredToken);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      setStoredToken(token);
-      getCurrentUser({ headers: { Authorization: `Bearer ${token}` } })
-        .then(u => setUser(u))
-        .catch(() => {
-          setToken(null);
-          removeStoredToken();
-        })
-        .finally(() => setIsLoading(false));
-    } else {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id);
+        setUser(profile);
+        setToken(session.access_token);
+      }
       setIsLoading(false);
-    }
-  }, [token]);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          const profile = await fetchProfile(session.user.id);
+          setUser(profile);
+          setToken(session.access_token);
+        } else {
+          setUser(null);
+          setToken(null);
+        }
+        if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+          setIsLoading(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const setAuth = (u: User, t: string) => {
     setUser(u);
     setToken(t);
-    setStoredToken(t);
   };
 
-  const clearAuth = () => {
+  const clearAuth = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     setToken(null);
-    removeStoredToken();
   };
 
   const updateUser = (updates: Partial<User>) => {

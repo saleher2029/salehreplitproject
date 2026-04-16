@@ -1,22 +1,7 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useGetAdminNotes } from "@/lib/db";
 import { MessageSquare, Star, User, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
-
-type NoteRow = {
-  id: number;
-  userId: number;
-  examId: number;
-  score: number;
-  totalQuestions: number;
-  percentage: number;
-  completedAt: string;
-  difficulty: string | null;
-  notes: string | null;
-  studentName: string;
-  examTitle: string;
-};
 
 const DIFFICULTY_MAP: Record<string, { label: string; emoji: string; cls: string }> = {
   easy:   { label: "سهل",   emoji: "😊", cls: "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-400" },
@@ -25,21 +10,9 @@ const DIFFICULTY_MAP: Record<string, { label: string; emoji: string; cls: string
 };
 
 export default function AdminNotes() {
-  const { token } = useAuth();
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
-  const { data, isLoading } = useQuery<NoteRow[]>({
-    queryKey: ["/api/results/admin/notes"],
-    queryFn: async () => {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/results/admin/notes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("فشل في جلب الملاحظات");
-      return res.json();
-    },
-    retry: 0,
-    enabled: !!token,
-  });
+  const { data, isLoading } = useGetAdminNotes();
 
   const toggleExpand = (id: number) => {
     setExpanded(prev => {
@@ -50,13 +23,11 @@ export default function AdminNotes() {
     });
   };
 
-  // Summary stats
   const diffCount = { easy: 0, medium: 0, hard: 0 };
-  data?.forEach(r => { if (r.difficulty) diffCount[r.difficulty as keyof typeof diffCount]++; });
+  data?.forEach((r: any) => { if (r.difficulty) diffCount[r.difficulty as keyof typeof diffCount]++; });
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold font-serif flex items-center gap-2">
@@ -74,7 +45,6 @@ export default function AdminNotes() {
         )}
       </div>
 
-      {/* Difficulty summary */}
       {data && data.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {(["easy", "medium", "hard"] as const).map(d => {
@@ -90,7 +60,6 @@ export default function AdminNotes() {
         </div>
       )}
 
-      {/* Notes list */}
       {isLoading ? (
         <div className="flex justify-center items-center h-40">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -103,22 +72,19 @@ export default function AdminNotes() {
         </div>
       ) : (
         <div className="space-y-3">
-          {data.map(row => {
+          {data.map((row: any) => {
             const diff = row.difficulty ? DIFFICULTY_MAP[row.difficulty] : null;
             const isExpanded = expanded.has(row.id);
             return (
               <Card key={row.id} className="rounded-2xl border overflow-hidden">
-                {/* Row header */}
                 <button
                   onClick={() => toggleExpand(row.id)}
                   className="w-full p-5 flex items-center gap-4 text-right hover:bg-muted/30 transition-colors"
                 >
-                  {/* Avatar */}
                   <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
                     {row.studentName.charAt(0)}
                   </div>
 
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm">{row.studentName}</span>
@@ -132,7 +98,6 @@ export default function AdminNotes() {
                     </p>
                   </div>
 
-                  {/* Score + difficulty + date */}
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-sm font-bold text-primary">{row.percentage}%</span>
                     {diff && (
@@ -147,7 +112,6 @@ export default function AdminNotes() {
                   </div>
                 </button>
 
-                {/* Expanded content */}
                 {isExpanded && (
                   <div className="px-5 pb-5 pt-1 border-t border-border space-y-4">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -1,31 +1,22 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useGetSettings } from "@workspace/api-client-react";
+import { useGetSettings } from "@/lib/db";
 import { MessageCircle, Send, BookOpen, Settings, LogOut, Trophy } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { SettingsDrawer } from "@/components/settings-drawer";
 import { OnboardingModal } from "@/components/onboarding-modal";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { user, token, clearAuth } = useAuth();
+  const { user, clearAuth } = useAuth();
   const [, setLocation] = useLocation();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleLogout = async () => {
-    try {
-      await fetch(`${import.meta.env.BASE_URL}api/auth/logout`, {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-    } catch {}
-    clearAuth();
+    await clearAuth();
     setLocation("/login");
   };
 
-  const { data: settings } = useGetSettings({
-    request: { headers: token ? { Authorization: `Bearer ${token}` } : {} },
-  });
+  const { data: settings } = useGetSettings();
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground flex flex-col" dir="rtl">

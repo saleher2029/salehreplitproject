@@ -101,8 +101,8 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SyncLayer />
       <AuthProvider>
+        <SyncLayer />
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />

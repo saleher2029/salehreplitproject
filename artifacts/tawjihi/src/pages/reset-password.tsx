@@ -4,36 +4,17 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Lock, CheckCircle, BookOpen, AlertCircle } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { Lock, CheckCircle, BookOpen } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
-  const { setAuth } = useAuth();
-
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get("token") ?? "";
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
-        <div className="text-center space-y-4 max-w-sm">
-          <AlertCircle className="w-16 h-16 text-destructive mx-auto" />
-          <h2 className="text-xl font-bold font-serif">رابط غير صالح</h2>
-          <p className="text-muted-foreground text-sm">هذا الرابط غير صالح أو منتهي الصلاحية.</p>
-          <Button onClick={() => setLocation("/forgot-password")} className="rounded-xl font-bold">
-            طلب رابط جديد
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,24 +23,11 @@ export default function ResetPassword() {
 
     setLoading(true);
     setError("");
-    try {
-      const res = await fetch(`${import.meta.env.BASE_URL}api/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "حدث خطأ");
-      setSuccess(true);
-      if (data.token && data.user) {
-        setAuth(data.user, data.token);
-        setTimeout(() => setLocation("/"), 2500);
-      }
-    } catch (e: any) {
-      setError(e.message || "حدث خطأ، يرجى المحاولة مرة أخرى");
-    } finally {
-      setLoading(false);
-    }
+    const { error: sbError } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (sbError) return setError(sbError.message || "حدث خطأ، يرجى المحاولة مرة أخرى");
+    setSuccess(true);
+    setTimeout(() => setLocation("/"), 2500);
   };
 
   return (

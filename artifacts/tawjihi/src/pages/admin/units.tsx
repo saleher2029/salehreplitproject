@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useGetUnits, useGetSubjects, useGetSpecializations, useCreateUnit, useUpdateUnit, useDeleteUnit } from "@workspace/api-client-react";
+import { useGetUnits, useGetSubjects, useGetSpecializations, useCreateUnit, useUpdateUnit, useDeleteUnit } from "@/lib/db";
 import { useQueryClient } from "@tanstack/react-query";
-import { useApiOpts } from "@/hooks/use-api-opts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2, Trash2 } from "lucide-react";
@@ -9,15 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 export default function AdminUnits() {
   const queryClient = useQueryClient();
-  const options = useApiOpts();
 
-  const { data: units, isLoading } = useGetUnits({}, options);
-  const { data: subjects } = useGetSubjects({}, options);
-  const { data: specializations } = useGetSpecializations(options);
+  const { data: units, isLoading } = useGetUnits();
+  const { data: subjects } = useGetSubjects();
+  const { data: specializations } = useGetSpecializations();
 
-  const createMut = useCreateUnit(options);
-  const updateMut = useUpdateUnit(options);
-  const deleteMut = useDeleteUnit(options);
+  const createMut = useCreateUnit();
+  const updateMut = useUpdateUnit();
+  const deleteMut = useDeleteUnit();
 
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -72,7 +70,6 @@ export default function AdminUnits() {
     }
   };
 
-  // Group subjects by specialization for the dropdown
   const subjectsBySpec = specializations?.map(spec => ({
     spec,
     subjects: subjects?.filter(s => s.specializationId === spec.id) ?? [],
@@ -119,7 +116,6 @@ export default function AdminUnits() {
                 ))}
               </select>
 
-              {/* Preview of selected subject's specialization */}
               {subjectId && (() => {
                 const selSubject = subjects?.find(s => s.id === parseInt(subjectId));
                 const selSpec = selSubject

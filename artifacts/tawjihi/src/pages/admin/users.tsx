@@ -8,11 +8,10 @@ import {
   useUpdateUserSubscription,
   useSetUserExamAccess,
   useUnlockAllExamsForUser,
-} from "@workspace/api-client-react";
+} from "@/lib/db";
 import { useQueryClient } from "@tanstack/react-query";
-import { useApiOpts } from "@/hooks/use-api-opts";
 import { Button } from "@/components/ui/button";
-import { Trash2, ShieldAlert, Users, UserX, Lock, Unlock, Crown, KeyRound, ChevronDown } from "lucide-react";
+import { Trash2, ShieldAlert, Users, UserX, Lock, Unlock, Crown, KeyRound } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,13 +19,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: "مدير",
-  supervisor: "مشرف",
-  student: "طالب",
-  guest: "ضيف",
-};
 
 const ROLE_COLORS: Record<string, string> = {
   admin:      "bg-destructive/10 text-destructive",
@@ -38,18 +30,16 @@ const ROLE_COLORS: Record<string, string> = {
 function AccessModal({
   user,
   onClose,
-  options,
 }: {
-  user: { id: number; name: string; subscriptionStatus?: boolean };
+  user: { id: string; name: string; subscriptionStatus?: boolean };
   onClose: () => void;
-  options: ReturnType<typeof useApiOpts>;
 }) {
   const queryClient = useQueryClient();
-  const { data: allExams, isLoading: examsLoading } = useGetExams({}, options);
-  const { data: accessList, isLoading: accessLoading } = useGetUserExamAccess(user.id, options);
-  const subscriptionMut = useUpdateUserSubscription(options);
-  const examAccessMut = useSetUserExamAccess(options);
-  const unlockAllMut = useUnlockAllExamsForUser(options);
+  const { data: allExams, isLoading: examsLoading } = useGetExams();
+  const { data: accessList, isLoading: accessLoading } = useGetUserExamAccess(user.id);
+  const subscriptionMut = useUpdateUserSubscription();
+  const examAccessMut = useSetUserExamAccess();
+  const unlockAllMut = useUnlockAllExamsForUser();
 
   const isSubscribed = user.subscriptionStatus ?? false;
 
@@ -210,14 +200,13 @@ function AccessModal({
 
 export default function AdminUsers() {
   const queryClient = useQueryClient();
-  const options = useApiOpts();
 
-  const { data: users, isLoading } = useGetUsers(options);
-  const updateMut = useUpdateUser(options);
-  const deleteMut = useDeleteUser(options);
+  const { data: users, isLoading } = useGetUsers();
+  const updateMut = useUpdateUser();
+  const deleteMut = useDeleteUser();
 
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
-  const [accessTarget, setAccessTarget] = useState<{ id: number; name: string; subscriptionStatus?: boolean } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [accessTarget, setAccessTarget] = useState<{ id: string; name: string; subscriptionStatus?: boolean } | null>(null);
 
   const confirmDelete = () => {
     if (!deleteTarget) return;
@@ -233,7 +222,7 @@ export default function AdminUsers() {
     );
   };
 
-  const handleRoleChange = (id: number, role: string) => {
+  const handleRoleChange = (id: string, role: string) => {
     updateMut.mutate(
       { id, data: { role: role as any } },
       { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/users"] }) },
@@ -297,7 +286,7 @@ export default function AdminUsers() {
                     className="border-b last:border-0 hover:bg-muted/20 transition-colors"
                   >
                     <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
-                      {user.id}
+                      {typeof user.id === "string" ? user.id.slice(0, 8) : user.id}
                     </td>
                     <td className="px-5 py-3.5 font-bold">{user.name}</td>
                     <td className="px-5 py-3.5 text-muted-foreground text-xs">
@@ -374,7 +363,6 @@ export default function AdminUsers() {
         <AccessModal
           user={accessTarget}
           onClose={() => setAccessTarget(null)}
-          options={options}
         />
       )}
 

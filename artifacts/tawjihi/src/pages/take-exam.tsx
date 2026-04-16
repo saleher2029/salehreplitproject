@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useGetExam, useSubmitExam } from "@workspace/api-client-react";
+import { useGetExam, useSubmitResult } from "@/lib/db";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ── Fisher-Yates shuffle ───────────────────────────────────────────────────
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -47,8 +46,7 @@ function isEnglishExam(questions: any[]): boolean {
   return totalChars > 0 && latinCount / totalChars > 0.5;
 }
 
-// ── localStorage helpers ─────────────────────────────────────────────────────
-function progressKey(userId: number, examId: number) {
+function progressKey(userId: string, examId: number) {
   return `tawjihi_exam_${userId}_${examId}`;
 }
 
@@ -69,20 +67,17 @@ function clearProgress(key: string) {
 }
 
 export default function TakeExam({ params }: { params: { id: string } }) {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const examId = parseInt(params.id);
   const search = useSearch();
   const _sp = new URLSearchParams(search);
   const navSubjectId = _sp.get("subjectId");
   const navSpecializationId = _sp.get("specializationId");
-  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-  const reqOpts = { request: { headers } };
 
-  const { data: exam, isLoading } = useGetExam(examId, reqOpts);
-  const submitMutation = useSubmitExam(reqOpts);
+  const { data: exam, isLoading } = useGetExam(examId);
+  const submitMutation = useSubmitResult();
   const [, setLocation] = useLocation();
 
-  // Anti-screenshot: active for entire exam page, only for students & guests (not admins/supervisors)
   const isAdmin = user?.role === "admin" || user?.role === "supervisor";
   const [phase, setPhase] = useState<"confirm" | "exam" | "submitting">("confirm");
   useAntiScreenshot(!isAdmin);
@@ -96,7 +91,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
   const navStripRef = useRef<HTMLDivElement>(null);
   const pKey = user ? progressKey(user.id, examId) : "";
 
-  // ── Restore saved progress ──────────────────────────────────────────────
   useEffect(() => {
     if (!pKey || !exam) return;
     const saved = loadProgress(pKey);
@@ -107,7 +101,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     if (typeof saved.currentIdx === "number") setCurrentIdx(saved.currentIdx);
   }, [pKey, exam]);
 
-  // ── Auto-scroll nav strip to current question ─────────────────────────
   useEffect(() => {
     if (!navStripRef.current) return;
     const container = navStripRef.current;
@@ -117,7 +110,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     container.scrollTo({ left: scrollLeft, behavior: "smooth" });
   }, [currentIdx]);
 
-  // ── Auto-save progress whenever state changes ───────────────────────────
   useEffect(() => {
     if (phase !== "exam" || !pKey) return;
     saveProgress(pKey, {
@@ -128,24 +120,41 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     });
   }, [answers, flagged, bookmarked, currentIdx, phase, pKey]);
 
-  // ── Submit ──────────────────────────────────────────────────────────────
+  const questions = useMemo(() => {
+    const all = exam?.questions ?? [];
+    const limit = exam?.questionLimit;
+    if (limit && limit > 0 && limit < all.length) {
+      return shuffleArray(all).slice(0, limit);
+    }
+    return all;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exam?.id]);
+
   const handleSubmit = useCallback(() => {
+    if (!exam) return;
     if (timerRef.current) clearInterval(timerRef.current);
     setPhase("submitting");
-    const formattedAnswers = Object.entries(answers).map(([qId, val]) => ({
-      questionId: parseInt(qId),
-      selectedOption: val as any,
-    }));
+
+    const questionMap = new Map(exam.questions.map((q: any) => [q.id, q.correctOption]));
+    const formattedAnswers = Object.entries(answers).map(([qId, val]) => {
+      const qIdNum = parseInt(qId);
+      return {
+        questionId: qIdNum,
+        selectedOption: val as any,
+        isCorrect: val === questionMap.get(qIdNum),
+      };
+    });
+
     submitMutation.mutate(
-      { data: { examId, answers: formattedAnswers, bookmarkedQuestionIds: [...bookmarked] } },
+      { examId, answers: formattedAnswers, bookmarkedQuestionIds: [...bookmarked] },
       {
         onSuccess: (res) => {
           clearProgress(pKey);
-          setLocation(`/result/${res.id}`);
+          setLocation(`/result/${res.resultId}`);
         },
       },
     );
-  }, [answers, examId, bookmarked, pKey]);
+  }, [answers, examId, bookmarked, pKey, exam]);
 
   useEffect(() => {
     if (phase === "exam" && exam?.timeLimit) {
@@ -168,18 +177,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timeLeft]);
 
-  // ── Randomize questions if questionLimit is set ─────────────────────────
-  // Must be before early returns to respect hooks rules
-  const questions = useMemo(() => {
-    const all = exam?.questions ?? [];
-    const limit = exam?.questionLimit;
-    if (limit && limit > 0 && limit < all.length) {
-      return shuffleArray(all).slice(0, limit);
-    }
-    return all;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exam?.id]); // re-shuffle only when exam changes
-
   const isEng = useMemo(() => isEnglishExam(questions), [questions]);
   const optionLabels = isEng ? OPTION_LABELS_EN : OPTION_LABELS_AR;
 
@@ -196,7 +193,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
   const isTimeLow = timeLeft !== null && timeLeft <= 60;
   const currentQ = questions[currentIdx];
 
-  // ── Confirm screen ──────────────────────────────────────────────────────
   if (phase === "confirm") {
     const hasSavedProgress = pKey ? !!loadProgress(pKey) : false;
     return (
@@ -255,7 +251,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
     );
   }
 
-  // ── Exam screen ─────────────────────────────────────────────────────────
   return (
     <div className="max-w-3xl mx-auto pb-28" dir="rtl">
 
@@ -275,11 +270,10 @@ export default function TakeExam({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Question number strip - horizontal scrollable */}
         <div
           ref={navStripRef}
           className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as any}
         >
           {questions.map((q, i) => {
             const answered = !!answers[q.id];
@@ -324,7 +318,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
               answers[currentQ.id] ? "border-primary/30 bg-primary/5" : "border-border bg-card"
             }`}>
 
-              {/* Question header */}
               <div className="flex items-center justify-between gap-2 mb-4">
                 <div className="flex items-center gap-2.5">
                   <div className={`w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-full flex items-center justify-center font-bold text-sm ${
@@ -373,12 +366,10 @@ export default function TakeExam({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
-              {/* Question text */}
               {currentQ.text?.trim() && (
                 <h3 className="text-base sm:text-lg md:text-xl font-bold leading-relaxed mb-4 pr-1">{currentQ.text}</h3>
               )}
 
-              {/* Question image */}
               {currentQ.imageUrl && (
                 <div className="relative group mb-4">
                   <img
@@ -397,7 +388,6 @@ export default function TakeExam({ params }: { params: { id: string } }) {
                 </div>
               )}
 
-              {/* Options */}
               <RadioGroup
                 value={answers[currentQ.id] ?? ""}
                 onValueChange={val => setAnswers(prev => ({ ...prev, [currentQ.id]: val }))}
@@ -530,11 +520,11 @@ export default function TakeExam({ params }: { params: { id: string } }) {
               <img
                 src={zoomedImage}
                 alt="صورة السؤال"
-                className="w-full max-h-[85vh] object-contain rounded-2xl"
+                className="w-full rounded-2xl object-contain max-h-[85vh]"
               />
               <button
                 onClick={() => setZoomedImage(null)}
-                className="absolute top-3 left-3 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                className="absolute top-3 left-3 bg-black/70 text-white rounded-full p-2 hover:bg-black/90 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

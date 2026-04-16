@@ -1,17 +1,13 @@
-import { useGetSubjects } from "@workspace/api-client-react";
+import { useGetSubjects } from "@/lib/db";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Book, ChevronLeft, ArrowRight } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 
 export default function Subjects({ params }: { params: { id: string } }) {
-  const { token } = useAuth();
   const specializationId = parseInt(params.id);
-  const { data, isLoading } = useGetSubjects({ specializationId }, {
-    request: { headers: token ? { 'Authorization': `Bearer ${token}` } : {} }
-  });
+  const { data, isLoading } = useGetSubjects({ specializationId });
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-64">

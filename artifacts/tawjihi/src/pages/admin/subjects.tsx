@@ -1,22 +1,20 @@
 import { useState } from "react";
-import { useGetSubjects, useGetSpecializations, useCreateSubject, useUpdateSubject, useDeleteSubject } from "@workspace/api-client-react";
+import { useGetSubjects, useGetSpecializations, useCreateSubject, useUpdateSubject, useDeleteSubject } from "@/lib/db";
 import { useQueryClient } from "@tanstack/react-query";
-import { useApiOpts } from "@/hooks/use-api-opts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Edit2, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function AdminSubjects() {
   const queryClient = useQueryClient();
-  const options = useApiOpts();
   
-  const { data: subjects, isLoading } = useGetSubjects({}, options);
-  const { data: specializations } = useGetSpecializations(options);
+  const { data: subjects, isLoading } = useGetSubjects();
+  const { data: specializations } = useGetSpecializations();
   
-  const createMut = useCreateSubject(options);
-  const updateMut = useUpdateSubject(options);
-  const deleteMut = useDeleteSubject(options);
+  const createMut = useCreateSubject();
+  const updateMut = useUpdateSubject();
+  const deleteMut = useDeleteSubject();
 
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
